@@ -1,0 +1,17 @@
+{
+	"compileOnSave": true,
+	"compilerOptions": {
+		"types" : ["node"],
+		"module": "commonjs",
+
+		"rootDir": "./src/",
+		"outDir": "./dist/",
+
+
+		"noImplicitAny": true,
+		"removeComments": true,
+		"preserveConstEnums": true,
+		"sourceMap": true
+	},
+	"exclude": [ "dist", "node_modules"]
+}

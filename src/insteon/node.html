@@ -1,0 +1,33 @@
+<!-- Configuration Node -->
+<script type="text/javascript">
+	RED.nodes.registerType('insteon',{
+		category: 'Insteon',
+		color: '#3FADB5',
+		defaults: {
+			name: {value:""}
+		},
+		inputs:1,
+		outputs:1,
+		icon: "bridge-dash.png",
+		label: function() {
+			return this.name || "insteon";
+		}
+	});
+</script>
+
+<!-- Configure Panel -->
+<script type="text/x-red" data-template-name="insteon">
+	<div class="form-row">
+		<label for="node-input-name"><i class="icon-tag"></i> Name</label>
+		<input type="text" id="node-input-name" placeholder="Name">
+	</div>
+	<div class="form-row">
+		<label for="node-input-type">Type</label>
+		<input type="text" id="node-input-type" placeholder="Type">
+	</div>
+</script>
+
+<!-- Help Panel -->
+<script type="text/x-red" data-help-name="insteon">
+	<p>A simple node that converts the message payloads into all lower-case characters</p>
+</script>
