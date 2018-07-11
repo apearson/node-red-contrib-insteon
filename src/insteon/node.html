@@ -29,5 +29,37 @@
 
 <!-- Help Panel -->
 <script type="text/x-red" data-help-name="insteon">
-	<p>A simple node that converts the message payloads into all lower-case characters</p>
+	<p>A testing node for the insteon system</p>
+
+	<h3>Inputs</h3>
+		<dl class="message-properties">
+			<dt>payload
+				<span class="property-type">string</span>
+			</dt>
+			<dd> the payload of the message to test on.</dd>
+			<dt class="optional">topic <span class="property-type">string</span></dt>
+			<dd> a string that is not used yet</dd>
+		</dl>
+
+	<h3>Outputs</h3>
+		<ol class="node-ports">
+			<li>Capitalized Output
+					<dl class="message-properties">
+							<dt>payload <span class="property-type">string</span></dt>
+							<dd>the string after it has been operated on.</dd>
+					</dl>
+			</li>
+		</ol>
+
+	<h3>Details</h3>
+		<p><code>msg.payload</code> desc of the how the payload is going to be processed</p>
+		<p>The topic used can be configured in the node or, if left blank, can be set
+		by <code>msg.topic</code>.</p>
+		<p>Likewise the QoS and retain values can be configured in the node or, if left
+		blank, set by <code>msg.qos</code> and <code>msg.retain</code> respectively.</p>
+
+	<h3>References</h3>
+		<ul>
+				<li><a href="https://github.com/apearson/node-red-contrib-insteon">GitHub</a> - the nodes github repository</li>
+		</ul>
 </script>
