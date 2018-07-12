@@ -1,34 +1,34 @@
 <!-- Configuration Node -->
 <script type="text/javascript">
-	RED.nodes.registerType('insteon',{
+	RED.nodes.registerType('insteonPLM',{
 		category: 'Insteon',
 		color: '#3FADB5',
 		defaults: {
-			name: {value:""}
+			modem: {value:'', type:'insteonModem'}
 		},
 		inputs:1,
 		outputs:1,
-		icon: "bridge-dash.png",
+		icon: 'bridge-dash.png',
 		label: function() {
-			return this.name || "insteon";
+			return this.name || 'PLM';
 		}
 	});
 </script>
 
 <!-- Configure Panel -->
-<script type="text/x-red" data-template-name="insteon">
+<script type="text/x-red" data-template-name="insteonPLM">
+	<div class="form-row">
+		<label for="node-input-modem">Insteon Modem</label>
+		<input type="text" id="node-input-modem" placeholder="/dev/usb123">
+	</div>
 	<div class="form-row">
 		<label for="node-input-name"><i class="icon-tag"></i> Name</label>
 		<input type="text" id="node-input-name" placeholder="Name">
 	</div>
-	<div class="form-row">
-		<label for="node-input-type">Type</label>
-		<input type="text" id="node-input-type" placeholder="Type">
-	</div>
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="insteon">
+<script type="text/x-red" data-help-name="insteonPLM">
 	<p>A testing node for the insteon system</p>
 
 	<h3>Inputs</h3>

@@ -10,8 +10,8 @@
 	},
 	"node-red": {
 		"nodes": {
-			"insteon": "./dist/insteon/node.js",
-			"OutletLinc": "./dist/OutletLinc/node.js"
+			"insteon": "./dist/insteonPLM/insteonPLM.js",
+			"insteonModem": "./dist/insteonModem/insteonModem.js"
 		}
 	},
 	"devDependencies": {
