@@ -10,8 +10,8 @@
 	},
 	"node-red": {
 		"nodes": {
-			"insteon": "./dist/insteonPLM/insteonPLM.js",
-			"insteonModem": "./dist/insteonModem/insteonModem.js"
+			"insteonPLM": "./dist/insteonPLM/insteonPLM.js",
+			"PLMConfig": "./dist/PLMConfig/PLMConfig.js"
 		}
 	},
 	"devDependencies": {

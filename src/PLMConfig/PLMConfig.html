@@ -1,5 +1,6 @@
+<!-- Node Registration -->
 <script type="text/javascript">
-	RED.nodes.registerType('insteonModem',{
+	RED.nodes.registerType('PLMConfig',{
 		category: 'config',
 		defaults: {
 			path: {value:'',required: true},
@@ -10,7 +11,8 @@
 	});
 </script>
 
-<script type="text/x-red" data-template-name="insteonModem">
+<!-- Node Configuration -->
+<script type="text/x-red" data-template-name="PLMConfig">
 	<div class="form-row">
 		<label for="node-config-input-path"> Path</label>
 		<input type="text" id="node-config-input-path">

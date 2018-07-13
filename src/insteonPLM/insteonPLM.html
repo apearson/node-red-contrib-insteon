@@ -1,10 +1,10 @@
-<!-- Configuration Node -->
+<!-- Node Registration -->
 <script type="text/javascript">
 	RED.nodes.registerType('insteonPLM',{
 		category: 'Insteon',
 		color: '#3FADB5',
 		defaults: {
-			modem: {value:'', type:'insteonModem'}
+			modem: {value:'', type:'PLMConfig'}
 		},
 		inputs:1,
 		outputs:1,
@@ -15,7 +15,7 @@
 	});
 </script>
 
-<!-- Configure Panel -->
+<!-- Node Configuration -->
 <script type="text/x-red" data-template-name="insteonPLM">
 	<div class="form-row">
 		<label for="node-input-modem">Insteon Modem</label>
