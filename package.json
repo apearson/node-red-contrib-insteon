@@ -6,17 +6,24 @@
 	"scripts": {
 		"build": "rm -r dist/* && npm run copyFiles & npm run buildTS",
 		"buildTS": "tsc",
-		"copyFiles": "copyfiles -u 1 src/**/*.html dist/"
+		"copyFiles": "copyfiles -u 1 src/**/*.html dist/",
+		"debug": "ts-node ./test/debug"
 	},
 	"node-red": {
 		"nodes": {
-			"insteonPLM": "./dist/insteonPLM/insteonPLM.js",
-			"PLMConfig": "./dist/PLMConfig/PLMConfig.js"
+			"PLMConfig": "./dist/PLMConfig/PLMConfig.js",
+			"insteon-PLM": "./dist/insteonPLM/insteonPLM.js",
+			"insteon-Events": "./dist/insteonEvents/insteonEvents.js"
 		}
 	},
 	"devDependencies": {
 		"@types/node-red": "^0.17.1",
 		"copyfiles": "^1.2.0",
 		"typescript": "^2.6.2"
+	},
+	"dependencies": {
+		"@types/serialport": "^6.0.3",
+		"serialport": "^6.2.1",
+		"ts-node": "^7.0.0"
 	}
 }

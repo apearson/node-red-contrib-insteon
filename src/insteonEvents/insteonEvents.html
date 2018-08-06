@@ -1,23 +1,22 @@
 <!-- Node Registration -->
 <script type="text/javascript">
-	RED.nodes.registerType('Insteon-PLM',{
+	RED.nodes.registerType('Insteon-Events',{
 		category: 'Insteon',
 		color: '#2e88c5',
-		align: 'right',
 		defaults: {
 			modem: {value:'', type:'PLMConfig'}
 		},
-		inputs:1,
+		inputs:0,
 		outputs:1,
 		icon: 'bridge-dash.png',
 		label: function() {
-			return this.name || 'Insteon PLM';
+			return this.name || 'Insteon Events';
 		}
 	});
 </script>
 
 <!-- Node Configuration -->
-<script type="text/x-red" data-template-name="Insteon-PLM">
+<script type="text/x-red" data-template-name="Insteon-Events">
 	<div class="form-row">
 		<label for="node-input-modem">Insteon Modem</label>
 		<input type="text" id="node-input-modem" placeholder="/dev/usb123">
@@ -29,6 +28,6 @@
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="Insteon-PLM">
-	<p>A testing node for the insteon system</p>
+<script type="text/x-red" data-help-name="Insteon-Events">
+	<p>A event out node for the insteon system</p>
 </script>
