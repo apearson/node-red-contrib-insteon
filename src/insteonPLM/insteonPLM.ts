@@ -37,6 +37,7 @@ export = function(RED: Red){
 			switch (msg.topic) {
 				case 'info': msgOut = await getInfo(msg, this.PLMConfigNode.plm); break;
 				case 'config': msgOut = await getConfig(msg, this.PLMConfigNode.plm); break;
+				case 'links': msgOut = await getLinks(msg, this.PLMConfigNode.plm); break;
 				case 'syncInfo': msgOut = await syncInfo(msg, this.PLMConfigNode.plm); break;
 				case 'syncConfig': msgOut = await syncConfig(msg, this.PLMConfigNode.plm); break;
 				case 'syncLinks': msgOut = await syncLinks(msg, this.PLMConfigNode.plm); break;
@@ -75,6 +76,13 @@ async function getInfo(msg: any, plm: PLM){
 async function getConfig(msg: any, plm: PLM){
 	/* Getting info from modem */
 	msg.payload = await plm.getConfig();
+
+	/* Returning info */
+	return msg;
+}
+async function getLinks(msg: any, plm: PLM){
+	/* Getting info from modem */
+	msg.payload = await plm.getAllLinks();
 
 	/* Returning info */
 	return msg;
@@ -133,21 +141,21 @@ async function close(msg: any, plm: PLM){
 
 async function sendCommand(msg: any, plm: PLM){
 	/* Getting info from modem */
-	// msg.payload = await plm.sendStandardCommand();
+	msg.payload = await plm.sendStandardCommand(msg.device, msg.flags, msg.payload[0], msg.payload[1]);
 
 	/* Returning info */
 	return msg;
 }
 async function sendExtendedCommand(msg: any, plm: PLM){
 	/* Getting info from modem */
-	// msg.payload = await plm.sendExtendedCommand();
+	msg.payload = await plm.sendExtendedCommand(msg.device, msg.flags, msg.payload[0], msg.payload[1], msg.data);
 
 	/* Returning info */
 	return msg;
 }
 async function sendGroupCommand(msg: any, plm: PLM){
 	/* Getting info from modem */
-	// msg.payload = await plm.sendAllLinkCommand();
+	msg.payload = await plm.sendAllLinkCommand(msg.group, msg.payload[0], msg.payload[1]);
 
 	/* Returning info */
 	return msg;
@@ -155,7 +163,7 @@ async function sendGroupCommand(msg: any, plm: PLM){
 
 async function startLinking(msg: any, plm: PLM){
 	/* Getting info from modem */
-	// msg.payload = await plm.startLinking();
+	msg.payload = await plm.startLinking(msg.type, msg.payload);
 
 	/* Returning info */
 	return msg;
@@ -178,7 +186,7 @@ async function setConfig(msg: any, plm: PLM){
 }
 async function setCategory(msg: any, plm: PLM){
 	/* Getting info from modem */
-	// msg.payload = await plm.setCategory();
+	msg.payload = await plm.setCategory(msg.payload[0], msg.payload[1], msg.firmware);
 
 	/* Returning info */
 	return msg;
