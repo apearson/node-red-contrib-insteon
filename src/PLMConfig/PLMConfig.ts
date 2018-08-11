@@ -15,7 +15,7 @@ export = function(RED: Red){
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
 
-		/* Creating Insteon PLM Object */
-		this.plm = new PLM(props.path);
+		/* Saving config */
+		this.path = props.path;
 	});
 };

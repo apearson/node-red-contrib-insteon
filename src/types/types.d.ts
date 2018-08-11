@@ -4,9 +4,11 @@ import { PLM } from 'insteon-plm';
 
 /* Types */
 interface PLMConfigNode extends Node{
-	plm: PLM;
+	path: string;
 }
 
 interface PLMNode extends Node{
 	PLMConfigNode?: PLMConfigNode;
+	plm: PLM;
+	reconnectTime: number;
 }
