@@ -2,7 +2,6 @@
 import {Red, Node, NodeProperties} from 'node-red';
 import {PLMNode, PLMConfigNode} from '../types/types';
 import {PLM} from 'insteon-plm';
-import { settings } from 'cluster';
 
 interface insteonPLMProps extends NodeProperties{
 	modem: string;
