@@ -1,5 +1,5 @@
 /* Importing types */
-import {Red, Node, NodeProperties} from 'node-red';
+import {Red, NodeProperties} from 'node-red';
 import {PLMNode, PLMConfigNode} from '../types/types';
 import {PLM} from 'insteon-plm';
 
