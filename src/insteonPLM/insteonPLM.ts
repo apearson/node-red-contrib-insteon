@@ -1,7 +1,7 @@
 /* Importing types */
 import {Red, NodeProperties} from 'node-red';
 import {PLMNode, PLMConfigNode} from '../types/types';
-import {PLM} from 'insteon-plm';
+import {PLM, Packets} from 'insteon-plm';
 
 interface insteonPLMProps extends NodeProperties{
 	modem: string;
@@ -77,6 +77,7 @@ function setupPLM(node: PLMNode){
 	node.plm.on('connected', ()=> onConnected(node));
 	node.plm.on('disconnected', ()=> onDisconnected(node));
 	node.plm.on('error', (error)=> onError(node, error));
+	node.plm.on('packet', (packet: Packets.Packet)=> node.send({topic: 'packet', payload: packet}));
 }
 function onConnected(node: PLMNode){
 	node.log('Connected');

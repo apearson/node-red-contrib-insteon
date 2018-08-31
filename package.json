@@ -17,6 +17,9 @@
 			"insteon-Events": "./dist/insteonEvents/insteonEvents.js"
 		}
 	},
+	"files":[
+		"dist/"
+	],
 	"devDependencies": {
 		"@types/node-red": "^0.17.1",
 		"copyfiles": "^1.2.0",
