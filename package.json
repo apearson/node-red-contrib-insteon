@@ -1,9 +1,10 @@
 {
 	"name": "node-red-contrib-insteon",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Testing package for node red",
 	"license": "MIT",
 	"scripts": {
+		"prepublish": "npm run build",
 		"build": "rm -r dist/* && npm run copyFiles & npm run buildTS",
 		"buildTS": "tsc",
 		"copyFiles": "copyfiles -u 1 src/**/*.html dist/",
