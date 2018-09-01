@@ -17,7 +17,7 @@
 			"insteon-Events": "./dist/insteonEvents/insteonEvents.js"
 		}
 	},
-	"files":[
+	"files": [
 		"dist/"
 	],
 	"devDependencies": {
@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"@types/serialport": "^6.0.3",
+		"insteon-plm": "^0.2.0",
 		"serialport": "^6.2.1",
 		"ts-node": "^7.0.0"
 	}
