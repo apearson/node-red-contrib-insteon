@@ -16,95 +16,78 @@ export = function(RED: Red){
 
 		/* Retrieve the config node */
 		this.PLMConfigNode = RED.nodes.getNode(props.modem) as PLMConfigNode;
-		this.reconnectTime = RED.settings.serialReconnectTime || 15000;
 
-		/* Setting up PLM */
-		setupPLM(this);
+		/* Setting up PLM events */
+		this.PLMConfigNode.on('connected', ()=> onConnected(this));
+		this.PLMConfigNode.on('disconnected', ()=> onDisconnected(this));
+		this.PLMConfigNode.on('error', (error)=> onError(this, error));
 
 		/* Setting inital status */
-		this.log('Init');
-		this.status({fill: 'red', shape: 'ring', text: 'Disconnected'});
+		(this.PLMConfigNode.plm && this.PLMConfigNode.plm.connected)
+			? this.status({fill: 'red', shape: 'ring', text: 'Disconnected'})
+			: this.status({fill: 'green', shape: 'ring', text: 'Connected'});
 
 		/* On input */
-		this.on('input', async (msg)=>{
-			/* Output holder */
-			let msgOut;
-
-			/* Determing which processing to do */
-			try{
-				switch (msg.topic) {
-					case 'info': msgOut = await getInfo(msg, this.plm); break;
-					case 'config': msgOut = await getConfig(msg, this.plm); break;
-					case 'links': msgOut = await getLinks(msg, this.plm); break;
-					case 'syncInfo': msgOut = await syncInfo(msg, this.plm); break;
-					case 'syncConfig': msgOut = await syncConfig(msg, this.plm); break;
-					case 'syncLinks': msgOut = await syncLinks(msg, this.plm); break;
-
-					case 'reset': msgOut = await reset(msg, this.plm); break;
-					case 'sleep': msgOut = await sleep(msg, this.plm); break;
-					case 'wake': msgOut = await wake(msg, this.plm); break;
-					case 'close': msgOut = await close(msg, this.plm); break;
-
-					case 'command': msgOut = await sendCommand(msg, this.plm); break;
-					case 'extendedCommand': msgOut = await sendExtendedCommand(msg, this.plm); break;
-					case 'groupCommand': msgOut = await sendGroupCommand(msg, this.plm); break;
-
-					case 'startLinking': msgOut = await startLinking(msg, this.plm); break;
-					case 'stopLinking': msgOut = await stopLinking(msg, this.plm); break;
-
-					case 'setConfig': msgOut = await setConfig(msg, this.plm); break;
-					case 'setCategory': msgOut = await setCategory(msg, this.plm); break;
-					case 'setLed': msgOut = await setLed(msg, this.plm); break;
-				}
-			}
-			catch(error){
-				msgOut.error = error;
-				this.error('Error processing', msgOut);
-			}
-
-			/* Sending result */
-			this.send(msgOut);
-		});
+		this.on('input', (msg) => onInput(msg, this, this.PLMConfigNode.plm));
 	});
 };
 
 /* Connection Function */
-function setupPLM(node: PLMNode){
-	/* Creating Insteon PLM Object */
-	node.plm = new PLM(node.PLMConfigNode.path);
-
-	/* Waiting on events */
-	node.plm.on('connected', ()=> onConnected(node));
-	node.plm.on('disconnected', ()=> onDisconnected(node));
-	node.plm.on('error', (error)=> onError(node, error));
-	node.plm.on('packet', (packet: Packets.Packet)=> node.send({topic: 'packet', payload: packet}));
-}
 function onConnected(node: PLMNode){
-	node.log('Connected');
-
 	/* Setting connected status */
 	node.status({fill: 'green', shape: 'ring', text: 'Connected'});
 }
 function onDisconnected(node: PLMNode){
-	node.log('Disconnected');
-
 	/* Setting connected status */
 	node.status({fill: 'red', shape: 'ring', text: 'Disconnected'});
-
-	/* Setting up reconnection */
-	setTimeout(()=> setupPLM(node), node.reconnectTime)
 }
 function onError(node: PLMNode, error: Error){
-	node.log('Errored');
-
 	/* If PLM got disconnected, reconnect */
-	if(!node.plm.connected){
+	if(node.PLMConfigNode.plm && !node.PLMConfigNode.plm.connected){
 		/* Setting connected status */
 		node.status({fill: 'red', shape: 'ring', text: 'Disconnected'});
-
-		/* Setting up reconnection */
-		setTimeout(()=> setupPLM(node), node.reconnectTime);
 	}
+}
+
+/* Node RED Processing */
+async function onInput(msg: any, node: PLMNode, plm: PLM){
+	/* Output holder */
+	let msgOut: any = {};
+
+	/* Determing which processing to do */
+	try{
+		switch (msg.topic) {
+			case 'info': msgOut = await getInfo(msg, plm); break;
+			case 'config': msgOut = await getConfig(msg, plm); break;
+			case 'links': msgOut = await getLinks(msg, plm); break;
+			case 'syncInfo': msgOut = await syncInfo(msg, plm); break;
+			case 'syncConfig': msgOut = await syncConfig(msg, plm); break;
+			case 'syncLinks': msgOut = await syncLinks(msg, plm); break;
+
+			case 'reset': msgOut = await reset(msg, plm); break;
+			case 'sleep': msgOut = await sleep(msg,plm); break;
+			case 'wake': msgOut = await wake(msg, plm); break;
+			case 'close': msgOut = await close(msg, plm); break;
+
+			case 'command': msgOut = await sendCommand(msg, plm); break;
+			case 'extendedCommand': msgOut = await sendExtendedCommand(msg, plm); break;
+			case 'groupCommand': msgOut = await sendGroupCommand(msg, plm); break;
+
+			case 'startLinking': msgOut = await startLinking(msg, plm); break;
+			case 'stopLinking': msgOut = await stopLinking(msg, plm); break;
+
+			case 'setConfig': msgOut = await setConfig(msg, plm); break;
+			case 'setCategory': msgOut = await setCategory(msg, plm); break;
+			case 'setLed': msgOut = await setLed(msg, plm); break;
+		}
+	}
+	catch(error){
+		msgOut.error = error;
+		node.error('Error processing', msgOut);
+	}
+
+	/* Sending result */
+	node.send(msgOut);
 }
 
 /* Process Functions */
