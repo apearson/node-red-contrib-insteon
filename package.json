@@ -1,6 +1,6 @@
 {
 	"name": "node-red-contrib-insteon",
-	"version": "0.2.1",
+	"version": "0.3.0",
 	"description": "Testing package for node red",
 	"license": "MIT",
 	"scripts": {
@@ -24,8 +24,8 @@
 		"@types/node-red": "^0.17.1",
 		"@types/serialport": "^6.0.3",
 		"copyfiles": "^1.2.0",
-		"typescript": "^2.6.2",
-		"ts-node": "^7.0.0"
+		"ts-node": "^7.0.0",
+		"typescript": "^2.6.2"
 	},
 	"dependencies": {
 		"insteon-plm": "^0.2.1",
