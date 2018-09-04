@@ -14,6 +14,15 @@ export = function(RED: Red){
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
 
+		/* Checking if we don't have a modem */
+		if(!props.modem){
+			/* Updating status */
+			this.status({fill: 'red', shape: 'dot', text: 'No modem connected'});
+
+			/* Stopping execution */
+			return;
+		}
+
 		/* Retrieve the config node */
 		this.PLMConfigNode = RED.nodes.getNode(props.modem) as PLMConfigNode;
 
@@ -21,41 +30,54 @@ export = function(RED: Red){
 		this.PLMConfigNode.on('connected', ()=> onConnected(this));
 		this.PLMConfigNode.on('disconnected', ()=> onDisconnected(this));
 		this.PLMConfigNode.on('error', (error)=> onError(this, error));
+		this.PLMConfigNode.on('packet', (packet)=> onPacket(this, packet));
 
 		/* Setting inital status */
-		(this.PLMConfigNode.plm && this.PLMConfigNode.plm.connected)
+		(this.PLMConfigNode.connected)
 			? this.status({fill: 'red', shape: 'ring', text: 'Disconnected'})
 			: this.status({fill: 'green', shape: 'ring', text: 'Connected'});
 
 		/* On input */
-		this.on('input', (msg) => onInput(msg, this, this.PLMConfigNode.plm));
+		this.on('input', (msg) => onInput(msg, this));
 	});
 };
 
 /* Connection Function */
 function onConnected(node: PLMNode){
 	/* Setting connected status */
-	node.status({fill: 'green', shape: 'ring', text: 'Connected'});
+	node.status({fill: 'green', shape: 'dot', text: 'Connected'});
 }
 function onDisconnected(node: PLMNode){
 	/* Setting connected status */
-	node.status({fill: 'red', shape: 'ring', text: 'Disconnected'});
+	node.status({fill: 'red', shape: 'dot', text: 'Disconnected'});
 }
 function onError(node: PLMNode, error: Error){
 	/* If PLM got disconnected, reconnect */
-	if(node.PLMConfigNode.plm && !node.PLMConfigNode.plm.connected){
+	if(node.PLMConfigNode.connected){
 		/* Setting connected status */
 		node.status({fill: 'red', shape: 'ring', text: 'Disconnected'});
 	}
 }
+function onPacket(node: PLMNode, packet: Packets.Packet){
+	node.send({topic: 'packet', payload: packet});
+}
 
 /* Node RED Processing */
-async function onInput(msg: any, node: PLMNode, plm: PLM){
+async function onInput(msg: any, node: PLMNode){
 	/* Output holder */
 	let msgOut: any = {};
 
 	/* Determing which processing to do */
 	try{
+		/* PLM short name */
+		const plm = node.PLMConfigNode.plm;
+
+		/* Check if modem is avaliable and connected */
+		if(!plm || !plm.connected){
+			throw new Error('Modem not connected');
+		}
+
+		/* Act on request */
 		switch (msg.topic) {
 			case 'info': msgOut = await getInfo(msg, plm); break;
 			case 'config': msgOut = await getConfig(msg, plm); break;
@@ -82,8 +104,11 @@ async function onInput(msg: any, node: PLMNode, plm: PLM){
 		}
 	}
 	catch(error){
+		/* Setup error msg object */
 		msgOut.error = error;
-		node.error('Error processing', msgOut);
+
+		/* logging out to console */
+		node.error('Error processing', error);
 	}
 
 	/* Sending result */
