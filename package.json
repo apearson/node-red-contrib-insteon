@@ -1,6 +1,6 @@
 {
 	"name": "node-red-contrib-insteon",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Testing package for node red",
 	"license": "MIT",
 	"scripts": {
