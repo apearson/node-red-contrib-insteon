@@ -6,10 +6,10 @@ A library of nodes for interacting with the Insteon home automation ecosystem.
 # Nodes
 
 
-# Node: Insteon PLM
+## Insteon PLM
 This node is the main node for interacting with the modem directly.  It has the least number of layers and allows you to execute Insteon commands directly on the modem.
 
-## Messages
+### Messages
 
 **Topic**: The command the modem should execute
 
@@ -17,7 +17,7 @@ This node is the main node for interacting with the modem directly.  It has the 
 
 **Payload**: The body of the command
 
-## Commands
+### Commands
 * Info
 * Config
 * Links
