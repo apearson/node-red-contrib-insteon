@@ -5,15 +5,15 @@
 Request
 ```json
 	{
-		topic: "info",
+		"topic": "info",
 	}
 ```
 
 Response
 ```json
 	{
-		topic: "info",
-		payload: {
+		"topic": "info",
+		"payload": {
 			"type":96,
 			"ID":[21,21,21],
 			"devcat":3,
