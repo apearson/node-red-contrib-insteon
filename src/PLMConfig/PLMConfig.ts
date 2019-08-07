@@ -1,7 +1,7 @@
 /* Importing Libraries and types */
-import {Red, NodeProperties} from 'node-red';
-import {PLM, Packets} from 'insteon-plm';
-import {PLMConfigNode} from '../types/types';
+import { Red, NodeProperties } from 'node-red';
+import PLM, { Packets } from 'insteon-plm';
+import { PLMConfigNode } from '../types/types';
 
 /* Interfaces */
 interface PLMConfigNodeProps extends NodeProperties{
@@ -18,6 +18,7 @@ export = function(RED: Red){
 
 	/* Registering node type and a constructor*/
 	RED.nodes.registerType('PLMConfig', function(this: PLMConfigNode, props: PLMConfigNodeProps){
+
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
 
@@ -25,25 +26,36 @@ export = function(RED: Red){
 		this.path = props.path;
 
 		/* Setting up connected getter */
-		Object.defineProperty(this, 'connected', { get: ()=> this.plm? this.plm.connected: false });
+		Object.defineProperty(this, 'connected', { get: () => this.plm? this.plm.connected : false });
 
 		/* Setting up PLM */
 		setupPLM(this);
 	});
+
+	/* Setting up server to get serial nodes */
+	RED.httpAdmin.get(
+		"/insteon-ports",                                                  // URL
+		RED.auth.needsPermission('serial.read'),                           // Permission
+		async (req: any, res: any) => res.json(await PLM.GetPlmDevices())  // Get Devices as JSON
+	);
 };
 
 /* Connection Function */
 function setupPLM(node: PLMConfigNode){
-	node.log('Setting up new PLM');
+	node.log('Setting up PLM');
+
+	/* Removing old PLM */
+	removeOldPLM(node);
 
 	/* Creating Insteon PLM Object */
 	node.plm = new PLM(node.path);
 
 	/* Waiting on events */
+	node.on('close', ()=> onNodeClose(node));
 	node.plm.on('connected', ()=> onConnected(node));
 	node.plm.on('disconnected', ()=> onDisconnected(node));
-	node.plm.on('error', (error)=> onError(node, error));
-	node.plm.on('pakcet', (packet)=> onPacket(node, packet));
+	node.plm.on('error', (error: Error)=> onError(node, error));
+	node.plm.on('pakcet', (packet: Packets.Packet)=> onPacket(node, packet));
 }
 
 /* Event Functions */
@@ -59,25 +71,43 @@ function onDisconnected(node: PLMConfigNode){
 	/* Emitting Status */
 	node.emit('disconnected');
 
-	/* Killing plm */
-	node.plm = undefined;
-
 	/* Setting up reconnection */
-	setTimeout(()=> setupPLM(node), reconnectTime)
+	setTimeout(_ => setupPLM(node), reconnectTime)
 }
 function onError(node: PLMConfigNode, error: Error){
-	node.log('Errored');
+	node.log(`Error: ${error.message}`);
+
+	if(node.plm)
+		node.log(`Error: ${error.message}`);
 
 	/* Emitting Status */
 	node.emit('error', error);
 
-	/* If PLM got disconnected, reconnect */
-	if(node.plm && !node.plm.connected){
-		/* Setting up reconnection */
-		setTimeout(()=> setupPLM(node), reconnectTime);
-	}
+	/* Setting up reconnection */
+	setTimeout(()=> setupPLM(node), reconnectTime);
 }
 function onPacket(node: PLMConfigNode, packet: Packets.Packet){
 	/* Emitting Packet */
 	node.emit('packet', packet);
+}
+function onNodeClose(node: PLMConfigNode){
+	/* Closing PLM */
+	removeOldPLM(node);
+}
+
+/* Clean up functions */
+function removeOldPLM(node: PLMConfigNode){
+	/* Closing PLM */
+	if(node.plm){
+
+		// Removing all listeners
+		node.plm.removeAllListeners();
+
+		// Closing connection
+		if(node.plm.connected)
+			node.plm.close();
+
+		// Killing ref
+		delete node.plm;
+	}
 }

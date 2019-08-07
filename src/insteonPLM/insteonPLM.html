@@ -5,13 +5,16 @@
 		color: '#2e88c5',
 		align: 'right',
 		defaults: {
-			modem: {value:'', type:'PLMConfig'}
+			modem: { value:'', type:'PLMConfig' },
+			name: { value: '' }
 		},
 		inputs:1,
 		outputs:1,
 		icon: 'bridge-dash.png',
 		label: function() {
-			return this.name || 'Insteon PLM';
+			var modemNode = RED.nodes.node(this.modem);
+
+			return this.name || modemNode.label() || 'Insteon PLM';
 		}
 	});
 </script>

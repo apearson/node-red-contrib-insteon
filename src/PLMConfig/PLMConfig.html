@@ -3,7 +3,31 @@
 	RED.nodes.registerType('PLMConfig',{
 		category: 'config',
 		defaults: {
-			path: {value:'',required: true}
+			path: { value: '', required: true }
+		},
+		oneditprepare: function(){
+			try { $("#node-config-input-path").autocomplete( "destroy" ); }
+			catch(err) { }
+
+			$("#node-config-lookup-modems").click( _ => {
+
+					$("#node-config-lookup-modems").addClass('disabled');
+
+					$.getJSON('insteon-ports', data => {
+
+							$("#node-config-lookup-modems").removeClass('disabled');
+
+							let autoConfig = {
+									source: data.map(_ => _.comName),
+									minLength: 0,
+									close: () => {
+											$("#node-config-input-path").autocomplete( "destroy" );
+									}
+							};
+
+							$("#node-config-input-path").autocomplete(autoConfig).autocomplete("search","");
+					});
+			});
 		},
 		label: function() {
 			return this.path;
@@ -14,8 +38,9 @@
 <!-- Node Configuration -->
 <script type="text/x-red" data-template-name="PLMConfig">
 	<div class="form-row">
-		<label for="node-config-input-path"> Path</label>
-		<input type="text" id="node-config-input-path">
+		<label for="node-config-input-path">Path</label>
+		<input type="text" id="node-config-input-path" style="width:66%;">
+		<a id="node-config-lookup-modems" class="btn"><i id="node-config-lookup-modems-icon" class="fa fa-search"></i></a>
 	</div>
 </script>
 

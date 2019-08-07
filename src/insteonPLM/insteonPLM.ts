@@ -1,7 +1,7 @@
 /* Importing types */
-import {Red, NodeProperties} from 'node-red';
-import {PLMNode, PLMConfigNode} from '../types/types';
-import {PLM, Packets} from 'insteon-plm';
+import { Red, NodeProperties } from 'node-red';
+import { PLMNode, PLMConfigNode } from '../types/types';
+import PLM, { Packets } from 'insteon-plm';
 
 interface insteonPLMProps extends NodeProperties{
 	modem: string;
@@ -11,13 +11,14 @@ interface insteonPLMProps extends NodeProperties{
 export = function(RED: Red){
 	/* Registering node type and a constructor*/
 	RED.nodes.registerType('Insteon-PLM', function(this: PLMNode, props: insteonPLMProps){
+
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
 
 		/* Checking if we don't have a modem */
 		if(!props.modem){
 			/* Updating status */
-			this.status({fill: 'red', shape: 'dot', text: 'No modem connected'});
+			this.status({fill: 'red', shape: 'dot', text: 'No Modem Connected'});
 
 			/* Stopping execution */
 			return;
@@ -29,16 +30,17 @@ export = function(RED: Red){
 		/* Setting up PLM events */
 		this.PLMConfigNode.on('connected', ()=> onConnected(this));
 		this.PLMConfigNode.on('disconnected', ()=> onDisconnected(this));
-		this.PLMConfigNode.on('error', (error)=> onError(this, error));
-		this.PLMConfigNode.on('packet', (packet)=> onPacket(this, packet));
+		this.PLMConfigNode.on('error', e => onError(this, e));
+		this.PLMConfigNode.on('packet', p => onPacket(this, p));
 
 		/* Setting inital status */
-		(this.PLMConfigNode.connected)
-			? this.status({fill: 'red', shape: 'ring', text: 'Disconnected'})
-			: this.status({fill: 'green', shape: 'ring', text: 'Connected'});
+		(this.PLMConfigNode.plm && this.PLMConfigNode.plm.connected)
+			? this.status({fill: 'green', shape: 'dot', text: 'Connected'})
+			: this.status({fill: 'red', shape: 'dot', text: 'Disconnected'});
 
 		/* On input */
 		this.on('input', (msg) => onInput(msg, this));
+
 	});
 };
 
@@ -53,9 +55,8 @@ function onDisconnected(node: PLMNode){
 }
 function onError(node: PLMNode, error: Error){
 	/* If PLM got disconnected, reconnect */
-	if(node.PLMConfigNode.connected){
-		/* Setting connected status */
-		node.status({fill: 'red', shape: 'ring', text: 'Disconnected'});
+	if(node.PLMConfigNode.plm && node.PLMConfigNode.plm.connected){
+		node.status({fill: 'red', shape: 'ring', text: 'Errored'});
 	}
 }
 function onPacket(node: PLMNode, packet: Packets.Packet){
