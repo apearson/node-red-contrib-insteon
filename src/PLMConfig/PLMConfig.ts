@@ -55,7 +55,7 @@ function setupPLM(node: PLMConfigNode){
 	node.plm.on('connected', ()=> onConnected(node));
 	node.plm.on('disconnected', ()=> onDisconnected(node));
 	node.plm.on('error', (error: Error)=> onError(node, error));
-	node.plm.on('pakcet', (packet: Packets.Packet)=> onPacket(node, packet));
+	node.plm.on('packet', (packet: Packets.Packet)=> onPacket(node, packet));
 }
 
 /* Event Functions */
