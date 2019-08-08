@@ -9,7 +9,8 @@
 		"buildTS": "tsc",
 		"copyFiles": "copyfiles -u 1 src/**/*.html dist/",
 		"debug": "ts-node ./test/debug",
-		"watch": "watch 'yarn run build' src"
+		"watch": "watch 'yarn run build' src",
+		"watch:files": "watch 'yarn run copyFiles' src"
 	},
 	"node-red": {
 		"nodes": {
