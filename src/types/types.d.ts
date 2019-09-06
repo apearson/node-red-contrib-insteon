@@ -5,6 +5,7 @@ import PLM from 'insteon-plm';
 /* Types */
 interface PLMConfigNode extends Node{
 	path: string;
+	errored: boolean;
 	plm?: PLM;
 }
 

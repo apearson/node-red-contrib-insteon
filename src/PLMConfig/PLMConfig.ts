@@ -24,6 +24,7 @@ export = function(RED: Red){
 
 		/* Saving config */
 		this.path = props.path;
+		this.errored = false;
 
 		/* Setting up connected getter */
 		Object.defineProperty(this, 'connected', { get: () => this.plm? this.plm.connected : false });
@@ -36,14 +37,13 @@ export = function(RED: Red){
 	RED.httpAdmin.get(
 		"/insteon-ports",                                                  // URL
 		RED.auth.needsPermission('serial.read'),                           // Permission
-		async (req: any, res: any) => res.json(await PLM.GetPlmDevices())  // Get Devices as JSON
+		async (req: any, res: any) => res.json(await PLM.getPlmDevices())  // Get Devices as JSON
 	);
 };
 
 /* Connection Function */
 function setupPLM(node: PLMConfigNode){
-	node.log('Setting up PLM');
-
+	
 	/* Removing old PLM */
 	removeOldPLM(node);
 
@@ -62,6 +62,8 @@ function setupPLM(node: PLMConfigNode){
 function onConnected(node: PLMConfigNode){
 	node.log('Connected');
 
+	node.errored = false;
+
 	/* Emitting Status */
 	node.emit('connected');
 }
@@ -75,10 +77,11 @@ function onDisconnected(node: PLMConfigNode){
 	setTimeout(_ => setupPLM(node), reconnectTime)
 }
 function onError(node: PLMConfigNode, error: Error){
-	node.log(`Error: ${error.message}`);
 
-	if(node.plm)
+	if(!node.errored){
+		node.errored = true;
 		node.log(`Error: ${error.message}`);
+	}
 
 	/* Emitting Status */
 	node.emit('error', error);
