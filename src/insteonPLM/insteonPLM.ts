@@ -96,6 +96,9 @@ async function onInput(msg: any, node: PLMNode){
 			case 'extendedCommand': msgOut = await sendExtendedCommand(msg, plm); break;
 			case 'groupCommand': msgOut = await sendGroupCommand(msg, plm); break;
 
+			case 'addLink': msgOut = await addLink(msg, plm); break;
+			case 'deleteLink': msgOut = await deleteLink(msg, plm); break;
+			
 			case 'startLinking': msgOut = await startLinking(msg, plm); break;
 			case 'stopLinking': msgOut = await stopLinking(msg, plm); break;
 
@@ -227,6 +230,20 @@ async function stopLinking(msg: any, plm: PLM){
 	return msg;
 }
 
+async function addLink(msg: any, plm: PLM){
+	/* Getting info from modem */
+	msg.payload = await plm.addLink(msg.device, msg.group, msg.type);
+
+	/* Returning info */
+	return msg;
+}
+async function deleteLink(msg: any, plm: PLM){
+	/* Getting info from modem */
+	msg.payload = await plm.deleteLink(msg.device, msg.group, msg.type);
+
+	/* Returning info */
+	return msg;
+}
 
 async function setConfig(msg: any, plm: PLM){
 	/* Getting info from modem */

@@ -7,7 +7,7 @@
 		"prepublish": "yarn run build",
 		"build": "rm -r dist/* && yarn run copyFiles & yarn run build:ts",
 		"build:ts": "tsc",
-		"build:all": "tsc -d --watch",
+		"build:debug": "tsc -d --watch",
 		"copyFiles": "copyfiles -u 1 src/**/*.html dist/",
 		"debug": "ts-node ./test/debug",
 		"watch": "watch 'yarn run build' src",
