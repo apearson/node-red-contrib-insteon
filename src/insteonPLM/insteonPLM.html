@@ -33,5 +33,41 @@
 
 <!-- Help Panel -->
 <script type="text/x-red" data-help-name="Insteon-PLM">
-	<p>A testing node for the insteon system</p>
+	<h3>Info</h3>
+	Reads and writes data to an Insteon PowerLinc Modem.  
+	<br/><br/>
+	Control the modem using the topic as the command and the payload as the command data. This node can be used to directly control the modem and/or Insteon devices using different messages. This node outputs a lot of data and it is recommmended that you filter the messages for that messages you want. 
+
+	<h3>Topics</h3>
+	<h4>Info</h4>
+	info -  Get general info<br/>
+	config -  Get config info<br/>
+	links -  Get links<br/>
+	syncInfo -  Sync general ifno<br/>
+	syncConfig -  Sync config info<br/>
+	syncLinks -  Sync links<br/>
+	
+	<h4>Commands</h4>
+	command -  Send a standard Insteon command<br/>
+	extendedCommand -  Send an extended Insteon command<br/>
+	groupCommand -  Send an Insteon group command<br/>
+	
+	<h4>Syncing</h4>
+	addLink -  Add a link to a device<br/>
+	deleteLink -  Delete a link to a device<br/>
+	
+	<h4>Linking</h4>
+	startLinking -  Start manual linking<br/>
+	stopLinking -  Stop manual linking<br/>
+
+	<h4>Modem Control</h4>
+	reset -  Reset the modem (REMOVES ALL LINKS)<br/>
+	sleep -  Put modem to sleep<br/>
+	wake -  Wake modem from sleep<br/>
+	close -  Close modem (For removal)<br/>
+	
+	<h4>Modem Setup</h4>
+	setConfig -  Update a config setting<br/>
+	setCategory -  Change the modem's Insteon category<br/>
+	setLed -  Turn modem LED on/off (only works in manual LED mode)
 </script>
