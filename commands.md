@@ -199,16 +199,148 @@ Response
 
 ## Command
 
+```json
+{
+	"topic": "command",
+	"device": [0x21,0x21,0x21],
+	"payload": [0x2E, 0x00]
+}
+```
+
+Response
+```json
+{
+  "topic": "command",
+  "payload": {
+    "type": 98,
+    "extended": false,
+    "to": [ 21, 21, 21 ],
+    "flags": 15,
+    "cmd1": 46,
+    "cmd2": 0,
+    "ack": true
+  },
+  "device": [ 21, 21, 21 ]
+}
+```
+
 ## Extended Command
 
 ## Group Command
 
 ## Start Linking
 
+```json
+{
+	"topic": "startLinking",
+	"type": 1,
+	"payload": 1
+}
+```
+
+Response
+```json
+{
+  "topic": "startLinking",
+  "payload": {
+    "type": 100,
+    "linkCode": 1,
+    "allLinkGroup": 1,
+    "ack": true
+  },
+  "type": 1
+}
+```
+
 ## Stop Linking
+
+```json
+{
+	"topic": "stopLinking"
+}
+```
+
+Response
+```json
+{
+  "topic": "stopLinking",
+  "payload": {
+    "type": 101,
+    "ack": true
+  }
+}
+```
 
 ## Set Config
 
+```json
+{
+	"topic": "setConfig",
+	"payload": {
+		"autoLinking": true,
+		"monitorMode": true,
+		"autoLED": false,
+		"deadman": true
+	}
+}
+```
+
+Response
+```json
+{
+  "topic": "setConfig",
+  "payload": {
+    "type": 107,
+    "autoLinking": true,
+    "monitorMode": true,
+    "autoLED": false,
+    "deadman": true,
+    "ack": true
+  }
+}
+```
+
 ## Set Category
 
+```json
+{
+	"topic": "setCategory",
+	"payload": [0x03, 0x20],
+	"firmware": 0x3A
+}
+```
+
+Response
+```json
+{
+  "topic": "setCategory",
+  "payload": {
+    "type": 102,
+    "devcat": 3,
+    "subcat": 32,
+    "firmware": 58,
+    "ack": true
+  },
+  "firmware": 58
+}
+```
+
 ## Set LED
+
+```json
+{
+	"topic": "setLed",
+	"payload": false
+}
+```
+
+Response
+```json
+{
+  "topic": "setLed",
+  "payload": {
+    "type": 109,
+    "ack": true
+  }
+}
+```
