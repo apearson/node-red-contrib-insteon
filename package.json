@@ -3,6 +3,7 @@
 	"version": "0.5.1",
 	"description": "Insteon nodes for Node-RED",
 	"license": "MIT",
+	"keywords": [ "node-red" ],
 	"scripts": {
 		"prepublishOnly": "yarn run build",
 		"build": "rm -r dist/* && yarn run copyFiles & yarn run build:ts",
