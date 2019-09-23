@@ -268,9 +268,9 @@ emoji-regex@^7.0.1:
   integrity sha512-CwBLREIQ7LvYFB0WyRvwhq5N5qPhc6PMjD6bYggFlI5YyDgl+0vxq5VHbMOFqLg7hfWzmu8T5Z1QofhmTIhItA==
 
 end-of-stream@^1.1.0, end-of-stream@^1.4.1:
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.1.tgz#ed29634d19baba463b6ce6b80a37213eab71ec43"
-  integrity sha512-1MkrZNvWTKCaigbn+W15elq2BB/L22nqrSY5DKlo3X6+vclJm8Bb5djXJBmEX6fS3+zCh/F4VBK5Z2KxJt4s2Q==
+  version "1.4.2"
+  resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.2.tgz#080bf028edce8312b665ff18ea03cae0c3ac0ecb"
+  integrity sha512-gUSUszrsxlDnUbUwEI9Oygyrk4ZEWtVaHQc+uZHphVeNxl+qeqMV/jDWoTkjN1RmGlZ5QWAP7o458p/JMlikQg==
   dependencies:
     once "^1.4.0"
 
@@ -378,9 +378,9 @@ insteon-packet-parser@^3.1.2:
   integrity sha512-6Em6IBpGWWXUOTqk8cRTXNUgOwyZofL5b6a9sB3brt2QnDGYnwrAKtVbsmgneqYDbI0Kx3oLVdpjzyZ9aJfPDw==
 
 insteon-plm@^0.3.1:
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/insteon-plm/-/insteon-plm-0.3.1.tgz#5b64a6257e8889653f4e9dfee84863a576ef1c48"
-  integrity sha512-lOgUaKdHxH6sZ8pscrmlUz28mh2O27xgw65S3nXAek8CgsyAouWNiwPwEwEe2zCEdNC86KwJ9AIlt1Ua4VgXjA==
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/insteon-plm/-/insteon-plm-0.3.2.tgz#7bfed1455ec9047a8a6d714d41e967fbe5dde755"
+  integrity sha512-kou21kNsmJaef2E48EPFoPbyPC3K8ESdHXPOHwLxOu1BXA4ZAJQPJ3Dg9HKWSQvjMx7vH6+aN4rthtd0ejwwSA==
   dependencies:
     eventemitter2 "^5.0.0"
     insteon-packet-parser "^3.1.2"
