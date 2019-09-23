@@ -6,3 +6,7 @@ dist
 
 # VSCode
 *.code-workspace
+
+# deploy script
+update.sh
+.gitignore

@@ -16,7 +16,8 @@
 	"node-red": {
 		"nodes": {
 			"PLMConfig": "./dist/PLMConfig/PLMConfig.js",
-			"insteon-PLM": "./dist/insteonPLM/insteonPLM.js"
+			"insteon-PLM": "./dist/insteonPLM/insteonPLM.js",
+			"insteon-Device": "./dist/insteonDevice/insteonDevice.js"
 		}
 	},
 	"files": [
