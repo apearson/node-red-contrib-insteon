@@ -196,6 +196,18 @@ Response
 ```
 
 ## Close
+```json
+{
+	"topic": "close"
+}
+```
+
+Response
+```json
+{
+  "topic": "close"
+}
+```
 
 ## Command
 
@@ -225,8 +237,58 @@ Response
 ```
 
 ## Extended Command
+```json
+{
+	"topic": "extendedCommand",
+	"device": [0x42,0x42,0x42],
+	"payload": [0x13, 0x00],
+	"data": [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
+
+}
+```
+
+Response
+```json 
+{
+  "topic": "extendedCommand",
+  "payload": {
+    "type": 98,
+    "extended": true,
+    "to": [0x42,0x42,0x42],
+    "flags": 31,
+    "cmd1": 17,
+    "cmd2": 255,
+    "ack": null,
+    "userData": [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
+  },
+  "device": [0x42,0x42,0x42],
+  "data": [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
+}
+```
 
 ## Group Command
+```json
+{
+  "payload": [0x11, 0xFF],
+  "group": 12,
+  "topic": "groupCommand"
+}
+```
+
+Response
+```json 
+{
+  "topic": "packet",
+  "payload": {
+    "type": 97,
+    "allLinkGroup": 12,
+    "allLinkCommand": 19,
+    "broadcastCommand2": 0,
+    "ack": true
+  },
+}
+```
+
 
 ## Start Linking
 
