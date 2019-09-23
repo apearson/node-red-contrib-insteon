@@ -4,7 +4,7 @@
 	"description": "Insteon nodes for Node-RED",
 	"license": "MIT",
 	"scripts": {
-		"prepublish": "yarn run build",
+		"prepublishOnly": "yarn run build",
 		"build": "rm -r dist/* && yarn run copyFiles & yarn run build:ts",
 		"build:ts": "tsc",
 		"build:debug": "tsc -d --watch",
