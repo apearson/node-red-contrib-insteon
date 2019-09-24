@@ -18,4 +18,4 @@ This node is the main node for interacting with the modem directly.  It has the 
 
 
 ## Resources
-Command examples can be found in [wiki/Commands-for-Insteon-PLM-Node](https://github.com/apearson/node-red-contrib-insteon/wiki/PLM-Node)
+Command examples can be found in [wiki/PLM-Node](https://github.com/apearson/node-red-contrib-insteon/wiki/PLM-Node)
