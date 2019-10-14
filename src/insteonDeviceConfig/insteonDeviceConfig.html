@@ -1,0 +1,70 @@
+<!-- Node Registration -->
+<script type="text/javascript">
+	RED.nodes.registerType('insteon-device-config',{
+		category: 'config',
+		color: '#2e88c5',
+		align: 'left',
+		defaults: {
+			modem: { value:'', type:'PLMConfig' },
+			name: { value: '' },
+			address: {
+				value: '',
+				validate: function(v){
+					/* Check to see if this devie address was used in another node */
+					let devices = [];
+					RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : "");
+					let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === v.toLowerCase());
+					
+					if(duplicate.length > 0){
+						duplicate[0].dirty = true;
+						duplicate[0].highlighted = true;
+						RED.view.redraw();
+						
+						alert("`"+duplicate[0].name + "` is already using this address.");
+						return false;
+					}else{
+						/* Clear the red highlighted nodes */
+						devices.forEach(device => {
+							device.dirty = true;
+							device.highlighted = false;
+							RED.view.redraw();
+						});
+						return true;
+					}
+				}
+			}
+		},
+		inputs:0,
+		outputs:0,
+		icon: 'light.png',
+		label: function() {
+			return this.name || 'Device';
+		}
+	});
+</script>
+
+<!-- Node Configuration -->
+<script type="text/x-red" data-template-name="insteon-device-config">
+	<div class="form-row">
+		<label for="node-config-input-modem">Insteon Modem</label>
+		<input type="text" id="node-config-input-modem" placeholder="/dev/usb123">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-name"><i class="icon-tag"></i> Name</label>
+		<input type="text" id="node-config-input-name" placeholder="Name">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-address"><i class="icon-tag"></i>Address</label>
+		<input type="text" id="node-config-input-address" placeholder="aa.bb.cc" />
+	</div>
+</script>
+
+<!-- Help Panel -->
+<script type="text/x-red" data-help-name="insteon-device-config">
+	<h3>Info</h3>
+	<p>Represents one physical insteon device.</p>
+	
+	<p>Drag this node onto the pallet, assign it the insteon device ID and give it a name. </p>
+	
+	<p>The node will keep track of the current state of the physical device.</p>
+</script>
