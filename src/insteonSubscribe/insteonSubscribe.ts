@@ -22,10 +22,13 @@ export = function(RED: Red){
 		/* See which events the user subscribed to */
 		let selectedEvents = config.selectedEvents.map(el => {
 			return {
+				label: el.label,
 				cmd1: parseInt(el.cmd1,16),
-				// cmd2: parseInt(el.cmd2,16)
+				cmd2: parseInt(el.cmd2,16)
 			}
 		});
+		
+		let subtype = parseInt(config.subtype,16);
 		
 		/* Retrieve the device config node */
 		node.deviceConfigNode = RED.nodes.getNode(config.device);
@@ -37,8 +40,36 @@ export = function(RED: Red){
 		   filterPacket to only send the nodes that match the events that the user selected to subscribe to		   
 		*/
 		const filterPacket = (packet) => {
-			if(selectedEvents.filter(el => el.cmd1 === packet.cmd1).length !== 0){
-				node.send({payload: packet});
+			let matchedEvent = selectedEvents.filter(el => {
+				return el.cmd1 === packet.cmd1
+					&&
+					(isNaN(el.cmd2)
+						|| (el.cmd2 === packet.cmd2)
+					)
+					&&
+					(isNaN(subtype)
+						|| (subtype === packet.Flags.subtype)
+					)
+			});
+			
+			/* If this device is a dimmer, send a 0x19 status request to get the light's current brightness level so it can be included in the msg
+				Device type logic not impelemented yet
+			*/
+
+			// if(1){
+				// can't await here
+			// 	let level = await node.PLMConfigNode.sendCommand(node.deviceConfigNode.address, undefined, 0x19, undefined);
+			// }
+
+			if(matchedEvent.length !== 0){
+				node.send({
+					topic: node.deviceConfigNode.name,
+					payload: {
+						event: matchedEvent[0].label,
+						level: "TBD"
+					},
+					packet: packet
+				});
 			}
 		};
 

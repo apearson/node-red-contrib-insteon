@@ -7,6 +7,7 @@
 		defaults: {
 			device: { value:'', type:'insteon-device-config' },
 			name: { value: '' },
+			subtype: {value: ''},
 			selectedEvents: {value:null}
 		},
 		inputs:0,
@@ -17,6 +18,10 @@
 		},
 		oneditprepare: function(){
 			var node = this;
+			// Select the value in the subtype drop down
+			$(`#node-input-subtype option[value="${node.subtype}"]`).attr('selected', 'selected');
+			console.log("subtype:",node.subtype);
+
 			// Check the boxes for the events that have been selected
 			node.selectedEvents.map(el => $(`#${el.id}`).prop('checked',true));
 		},
@@ -28,6 +33,7 @@
 	            if ($(this).prop("checked")) {
 	                node.selectedEvents.push({
 	                	id: $(this).prop('id'),
+						label: $("label[for='" + $(this).attr('id') + "']").text(),
 						cmd1: $(this).attr('data-cmd1'),
 						cmd2: $(this).attr('data-cmd2')
 	                });
@@ -48,6 +54,14 @@
 		<label for="node-input-name"><i class="icon-tag"></i> Name</label>
 		<input type="text" id="node-input-name" placeholder="Name">
 	</div>
+	<div class="form-row">
+		<label for="node-input-subtype">Message Type</label>
+		<select id="node-input-subtype">
+			<option value="" label="All" />
+			<option value="0x6" label="Broadcast (Physically Triggered)" />
+			<option value="0x1" label="Acknowledge (Response to Command)" />
+		</select>
+	</div>
 	<div class="form-row event-selection">
 		<strong>Device Events</strong>
 		<ul>
@@ -55,8 +69,9 @@
 			<li><input type="checkbox" title="Turned Off"           id="node-input-event-turned-off"           data-cmd1="0x13" data-cmd2="" class="dimmer onoff" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-turned-off">Turned Off</label></li>
 			<li><input type="checkbox" title="Fast On"              id="node-input-event-fast-on"              data-cmd1="0x12" data-cmd2="" class="dimmer onoff" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-fast-on">Fast On</label></li>
 			<li><input type="checkbox" title="Fast Off"             id="node-input-event-fast-off"             data-cmd1="0x14" data-cmd2="" class="dimmer onoff" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-fast-off">Fast Off</label></li>
-			<li><input type="checkbox" title="Brightened"           id="node-input-event-brightened"           data-cmd1="0x15" data-cmd2="" class="dimmer"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-brightened">Brightened</label></li>
-			<li><input type="checkbox" title="Dimmed"               id="node-input-event-dimmed"               data-cmd1="0x16" data-cmd2="" class="dimmer"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dimmed">Dimmed</label></li>
+			<li><input type="checkbox" title="Brightened"           id="node-input-event-brightened"           data-cmd1="0x17" data-cmd2="0x1" class="dimmer"    style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-brightened">Brightened</label></li>
+			<li><input type="checkbox" title="Dimmed"               id="node-input-event-dimmed"               data-cmd1="0x17" data-cmd2="0x0" class="dimmer"    style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dimmed">Dimmed</label></li>
+			<li><input type="checkbox" title="Stop Dimming"         id="node-input-event-stop-dimming"         data-cmd1="0x18" data-cmd2="0x0" class="dimmer"    style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-stop-dimming">Stop Dimming</label></li>
 
 			<li><input type="checkbox" title="Heartbeat"            id="node-input-event-heartbeat"            data-cmd1="0x04" data-cmd2="" class="motion leak"  style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-heartbeat">Heartbeat</label></li>
 
