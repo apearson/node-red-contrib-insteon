@@ -1,4 +1,6 @@
+import { Red, NodeProperties } from 'node-red';
 import PLM, { Packet } from 'insteon-plm';
+import { SubscribeNode } from '../types/types';
 
 interface eventSelection {
     label: string;
@@ -6,15 +8,22 @@ interface eventSelection {
 	cmd2: number;
 }
 
+interface SubscribeConfigNodeProps extends NodeProperties{
+	device: string;
+	selectedEvents: string[];
+	subtype: string;
+}
+
 
 /* Exporting Node Function */
 export = function(RED: Red){		
 	/* Fired on every deploy */
-	function insteonSubscribe(config){
+	/* Registering node type and a constructor */
+	RED.nodes.registerType('subscribe', function(this: SubscribeNode, config: SubscribeConfigNodeProps){		
 		/* Creating actual node */
 		RED.nodes.createNode(this, config);
 		
-		let node = this;
+		let node = this as any;
 		
 		/* Clear the status */
 		node.status({});
@@ -29,7 +38,7 @@ export = function(RED: Red){
 		}
 		
 		/* See which events the user subscribed to */
-		let selectedEvents = config.selectedEvents.map(el => {
+		let selectedEvents = config.selectedEvents.map((el: any) => {
 			return {
 				label: el.label,
 				cmd1: parseInt(el.cmd1,16),
@@ -99,12 +108,7 @@ export = function(RED: Red){
 		node.on('close', function(removed: boolean, done: () => void){
 			node.PLMConfigNode.plm.removeListener(["**",node.deviceConfigNode.stringAddress],filterPacket);
 			done();
-		});
-		
-	}
-
-
-	/* Registering node type and a constructor*/
-	RED.nodes.registerType('subscribe', insteonSubscribe);
+		});	
+	});
 };
 

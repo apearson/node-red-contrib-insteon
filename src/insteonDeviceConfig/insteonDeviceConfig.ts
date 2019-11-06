@@ -7,22 +7,28 @@ The purpose of this deviceConfig node is to represent a physical insteon device 
 
 Internally the node will also track the devices real world state and emit events when those states change
 */
+
 import { Red, NodeProperties } from 'node-red';
-// import PLM, { Packets } from 'insteon-plm';
-import InsteonDevice from 'insteon-plm';
+import { PLMConfigNode, insteonDeviceConfigNode } from '../types/types';
+
+interface DeviceConfigNodeProps extends NodeProperties{
+	modem: string;
+	address: string;
+}
+
 
 /* Exporting Node Function */
 export = function(RED: Red){
 	/* Fired on every deploy */
-	// function insteonDevice(this: PLMNode, config: insteonPLMProps){
-	function insteonDeviceConfig(config){
+	/* Registering node type and a constructor */
+	RED.nodes.registerType('insteon-device-config', async function(this: insteonDeviceConfigNode, config: DeviceConfigNodeProps){
 		/* Creating actual node */
 		RED.nodes.createNode(this, config);
 		
 		let node = this;
 				
 		/* Turn the address string the user typed into the gui into an array of hex */
-		node.address = config.address.toUpperCase().split(".").map(el => parseInt("0x"+el,16)); 
+		node.address = config.address.toUpperCase().split(".").map((el: string) => parseInt("0x"+el,16)); 
 				
 		if(!Array.isArray(node.address)){
 			/* Stopping */
@@ -39,9 +45,10 @@ export = function(RED: Red){
 		node.PLMConfigNode = RED.nodes.getNode(config.modem) as PLMConfigNode;
 
 		/* Instanciate the device */
-		node.device = new InsteonDevice(["1","2",3], node.PLMConfigNode.plm, {debug: true});
+		node.device = await node.PLMConfigNode.plm!.getDeviceInstance(node.address, {debug: true, syncInfo: true, syncLinks: false});
+		// node.device = new InsteonDevice(["1","2",3], node.PLMConfigNode.plm, {debug: true});
 		
-		console.log("device string address:", "soon");
+		// console.log("device string address:", "soon");
 		
 
 		// /* Send a product data request message to the device to find out what it is */
@@ -58,8 +65,6 @@ export = function(RED: Red){
 		// 	node.warn(`got packet from ${node.stringAddress}`);
 		// 	node.warn(packet);
 		// });
-	}
+	});
 
-	/* Registering node type and a constructor */
-	RED.nodes.registerType('insteon-device-config', insteonDeviceConfig);	
 };
