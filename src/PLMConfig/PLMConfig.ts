@@ -1,6 +1,6 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import PLM, { Packets } from 'insteon-plm';
+import PLM, { Packet } from 'insteon-plm';
 import { PLMConfigNode } from '../types/types';
 
 /* Interfaces */
@@ -55,7 +55,7 @@ function setupPLM(node: PLMConfigNode){
 	node.plm.on('connected', ()=> onConnected(node));
 	node.plm.on('disconnected', ()=> onDisconnected(node));
 	node.plm.on('error', (error: Error)=> onError(node, error));
-	node.plm.on('packet', (packet: Packets.Packet)=> onPacket(node, packet));
+	node.plm.on('packet', (packet: Packet.Packet)=> onPacket(node, packet));
 }
 
 /* Event Functions */
@@ -89,7 +89,7 @@ function onError(node: PLMConfigNode, error: Error){
 	/* Setting up reconnection */
 	setTimeout(()=> setupPLM(node), reconnectTime);
 }
-function onPacket(node: PLMConfigNode, packet: Packets.Packet){
+function onPacket(node: PLMConfigNode, packet: Packet.Packet){
 	/* Emitting Packet */
 	node.emit('packet', packet);
 }

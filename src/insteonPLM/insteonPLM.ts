@@ -1,7 +1,7 @@
 /* Importing types */
 import { Red, NodeProperties } from 'node-red';
 import { PLMNode, PLMConfigNode } from '../types/types';
-import PLM, { Packets } from 'insteon-plm';
+import PLM, { Packet } from 'insteon-plm';
 
 interface insteonPLMProps extends NodeProperties{
 	modem: string;
@@ -59,7 +59,7 @@ function onError(node: PLMNode, error: Error){
 		node.status({fill: 'red', shape: 'ring', text: 'Errored'});
 	}
 }
-function onPacket(node: PLMNode, packet: Packets.Packet){
+function onPacket(node: PLMNode, packet: Packet.Packet){
 	node.send({topic: 'packet', payload: packet});
 }
 
