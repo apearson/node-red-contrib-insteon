@@ -10,6 +10,7 @@ Internally the node will also track the devices real world state and emit events
 
 import { Red, NodeProperties } from 'node-red';
 import { PLMConfigNode, insteonDeviceConfigNode } from '../types/types';
+import { Byte } from 'insteon-packet-parser';
 
 interface DeviceConfigNodeProps extends NodeProperties{
 	modem: string;
@@ -28,7 +29,7 @@ export = function(RED: Red){
 		let node = this;
 				
 		/* Turn the address string the user typed into the gui into an array of hex */
-		node.address = config.address.toUpperCase().split(".").map((el: string) => parseInt("0x"+el,16)); 
+		node.address = config.address.toUpperCase().split(".").map((el: string) => parseInt("0x"+el,16) as Byte);
 				
 		if(!Array.isArray(node.address)){
 			/* Stopping */
