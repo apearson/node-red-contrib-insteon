@@ -1,3 +1,12 @@
+import PLM, { Packet } from 'insteon-plm';
+
+interface eventSelection {
+    label: string;
+    cmd1: number;
+	cmd2: number;
+}
+
+
 /* Exporting Node Function */
 export = function(RED: Red){		
 	/* Fired on every deploy */
@@ -39,8 +48,10 @@ export = function(RED: Red){
 		/* Subscribe to the device's events
 		   filterPacket to only send the nodes that match the events that the user selected to subscribe to		   
 		*/
-		const filterPacket = (packet) => {
-			let matchedEvent = selectedEvents.filter(el => {
+		const filterPacket = async (packet: Packet.Packet) => {
+			// console.log('filter packet', packet);
+			
+			let matchedEvent = selectedEvents.filter((el: eventSelection) => {
 				return el.cmd1 === packet.cmd1
 					&&
 					(isNaN(el.cmd2)
@@ -56,20 +67,28 @@ export = function(RED: Red){
 				Device type logic not impelemented yet
 			*/
 
-			// if(1){
-				// can't await here
-			// 	let level = await node.PLMConfigNode.sendCommand(node.deviceConfigNode.address, undefined, 0x19, undefined);
-			// }
-
 			if(matchedEvent.length !== 0){
+				if(1){
+					// console.log('awaiting level');
+					//  // can't await here
+					// let level = await node.PLMConfigNode.plm.sendStandardCommand(node.deviceConfigNode.address, undefined, 0x19, undefined);
+					// console.log('done awaiting');
+					// console.log("level",level);
+				
+				
+				
 				node.send({
 					topic: node.deviceConfigNode.name,
 					payload: {
 						event: matchedEvent[0].label,
-						level: "TBD"
+						// level: level
 					},
 					packet: packet
 				});
+				
+				}
+			}else{
+				// node.send({topic: "no match", packet: packet});
 			}
 		};
 
@@ -77,7 +96,7 @@ export = function(RED: Red){
 		node.PLMConfigNode.plm.on(["**",node.deviceConfigNode.stringAddress], filterPacket);
 
 		/* Remove the event listener whenever the user modifies the node config or deletes the node */
-		node.on('close', function(removed,done){
+		node.on('close', function(removed: boolean, done: () => void){
 			node.PLMConfigNode.plm.removeListener(["**",node.deviceConfigNode.stringAddress],filterPacket);
 			done();
 		});
