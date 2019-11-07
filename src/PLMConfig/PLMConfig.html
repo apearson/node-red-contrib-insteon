@@ -28,9 +28,24 @@
 							$("#node-config-input-path").autocomplete(autoConfig).autocomplete("search","");
 					});
 			});
+			
+			/* Get the modem's links */
+			$.ajax({
+				method: "post",
+				dataType: "json",
+				url: "insteon-plm-links",
+				data: {configNodeId: configNodeId},
+				success: function(data){
+					console.log('ajax success',data);
+				},
+				error: function(error){
+					// This is not conventional, but we need a way to output the sapError object to the debug window in case the ajax call fails
+					// node.error() is not in context here
+					RED.debug.handleDebugMessage({name:"error: read table",msg:error, level: 20});					
+				}
+			})
 		},
 		label: function() {
-			return this.path;
 		}
 	});
 </script>
