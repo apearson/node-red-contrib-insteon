@@ -31,6 +31,7 @@ export = function(RED: Red){
 
 		/* Setting up PLM */
 		setupPLM(this);
+		
 	});
 
 	/* Setting up server to get serial nodes */
@@ -38,6 +39,32 @@ export = function(RED: Red){
 		"/insteon-ports",                                                  // URL
 		RED.auth.needsPermission('serial.read'),                           // Permission
 		async (req: any, res: any) => res.json(await PLM.getPlmDevices())  // Get Devices as JSON
+	);
+	
+	/* Server to provide the PLM's Link database
+		The ajax call to this node must post the node_id of the modem config node
+	*/
+	RED.httpAdmin.post(
+		"/insteon-plm-links",
+		RED.auth.needsPermission('serial.read'),
+		async (req: any, res: any) => {
+			
+			/* Lookup the PLM Config Node by the node ID that was passed in via the request */
+			let PLMConfigNode = RED.nodes.getNode(req.body.configNodeId) as PLMConfigNode;
+
+			/* Validate that the nodeId received is referencing a PLMConfig node */
+			if(PLMConfigNode.type === 'PLMConfig'){
+				/* Send the links back to the client */
+				res.json({
+					links: PLMConfigNode.plm!.links
+				});
+			}else{
+				res.json({
+					error: true,
+					message: "Invalid config node specified."
+				});
+			}
+		}
 	);
 };
 
