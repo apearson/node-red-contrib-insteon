@@ -6,6 +6,8 @@
 			path: { value: '', required: true }
 		},
 		oneditprepare: function(){
+			let configNodeId = this.id;
+			
 			try { $("#node-config-input-path").autocomplete( "destroy" ); }
 			catch(err) { }
 
@@ -46,6 +48,7 @@
 			})
 		},
 		label: function() {
+			return this.path || "PLM Config";
 		}
 	});
 </script>
@@ -57,6 +60,30 @@
 		<input type="text" id="node-config-input-path" style="width:66%;">
 		<a id="node-config-lookup-modems" class="btn"><i id="node-config-lookup-modems-icon" class="fa fa-search"></i></a>
 	</div>
+<!--	<div class="form-row">
+		<h5>Insteon Links</h5>
+		<table width="100%">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Type</th>
+					<th>Device</th>
+					<th>Group</th>
+					<th>Link Data</th>
+					<th>&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>XYZ</td>
+					<td>Dining Room</td>
+					<td>01</td>
+					<td>EE</td>
+					<td><a class="delete_link btn">Delete</a></td>
+				</tr>
+			</tbody>
+		</table>
+	</div> -->
 </script>
 
 <!-- Help Panel -->
