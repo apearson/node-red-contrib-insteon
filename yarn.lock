@@ -69,6 +69,11 @@
     "@serialport/binding-mock" "^2.0.5"
     debug "^4.1.1"
 
+"@types/bluebird@^3.5.28":
+  version "3.5.28"
+  resolved "https://registry.yarnpkg.com/@types/bluebird/-/bluebird-3.5.28.tgz#04c1a520ff076649236bc8ca21198542ce2bdb09"
+  integrity sha512-0Vk/kqkukxPKSzP9c8WJgisgGDx5oZDbsLLWIP5t70yThO/YleE+GEm2S1GlRALTaack3O7U5OS5qEm7q2kciA==
+
 "@types/node-red@^0.20.0":
   version "0.20.0"
   resolved "https://registry.yarnpkg.com/@types/node-red/-/node-red-0.20.0.tgz#b365c710fcd580ae2ac389c4c30133eaa3799f18"
@@ -387,11 +392,12 @@ insteon-packet-parser@^3.3.0:
   resolved "https://registry.yarnpkg.com/insteon-packet-parser/-/insteon-packet-parser-3.3.0.tgz#765b52c33ef0c982f607b804e32331fad0da3b48"
   integrity sha512-sXP6Li0okJZKpkA6Pz08JzhiMTwvQJWisKZZVVlLGSmS+OMxzELcAwfg9NF1gjDy6l3Ki7RIxC/yf7aDCUUIxQ==
 
-insteon-plm@^0.3.4:
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/insteon-plm/-/insteon-plm-0.3.4.tgz#1e2cff9c655d260a288e43a4a6cb0e4c7289124a"
-  integrity sha512-KgXLgo5nAsYgjouxNGK3p9QHsMH/KuwtMtTIW8FhMbR7nmZQfVWI425FoYnzpfqUgHDiPeyWocnqe3iKXV/0JA==
+insteon-plm@^0.3.7:
+  version "0.3.7"
+  resolved "https://registry.yarnpkg.com/insteon-plm/-/insteon-plm-0.3.7.tgz#d335f9540a764df58f0e505157f4d97672cd198b"
+  integrity sha512-TgcYWt/4Vf7fY1bnh00pCOC41uuNVYFrvvTFuWj8KuBtkO1g6rirsMR8kp75jo8TS6zfkpe4Z7MzT4QlgJIh1Q==
   dependencies:
+    "@types/bluebird" "^3.5.28"
     async "^3.1.0"
     bluebird "^3.7.1"
     debug "^4.1.1"
