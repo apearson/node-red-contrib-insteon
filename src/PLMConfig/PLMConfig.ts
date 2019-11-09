@@ -1,6 +1,6 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import PLM, { Packet } from 'insteon-plm';
+import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
 import { PLMConfigNode } from '../types/types';
 
 /* Interfaces */
@@ -45,27 +45,89 @@ export = function(RED: Red){
 		The ajax call to this node must post the node_id of the modem config node
 	*/
 	RED.httpAdmin.post(
-		"/insteon-plm-links",
+		"/insteon-plm-getlinks",
 		RED.auth.needsPermission('serial.read'),
 		async (req: any, res: any) => {
-			
 			/* Lookup the PLM Config Node by the node ID that was passed in via the request */
-			let PLMConfigNode = RED.nodes.getNode(req.body.configNodeId) as PLMConfigNode;
+			let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId, res);
+			if(PLMConfigNode === null) return;
 
-			/* Validate that the nodeId received is referencing a PLMConfig node */
-			if(PLMConfigNode.type === 'PLMConfig'){
-				/* Send the links back to the client */
-				res.json({
-					links: PLMConfigNode.plm!.links
-				});
-			}else{
-				res.json({
-					error: true,
-					message: "Invalid config node specified."
-				});
-			}
+			/* Send the links back to the client */
+			res.json({
+				links: PLMConfigNode.plm!.links
+			});
+			
 		}
 	);
+	
+
+	/* Server to link or unlink a device from the PLM's Link database
+		The ajax call to this node must post the node_id of the modem config node
+	*/
+	RED.httpAdmin.post(
+		"/insteon-plm-manage-device",
+		RED.auth.needsPermission('serial.read'),
+		async (req: any, res: any) => {
+			let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId, res);
+			let message = "";
+			
+			if(PLMConfigNode === null) return;
+			
+			/* Validate the device address */
+			let address = Utilities.toAddressArray(req.body.address) as Byte[];
+			if(address.length !== 3){
+				res.json({
+					error: true,
+					message: "Invalid Insteon device address. Please use format `AA.BB.CC`"
+				});
+				return;
+			}
+			
+			try{
+				/* Something strange is happening here -
+					queryDeviceInfo only works sometimes, othertimes it hangs indefinitely 
+					unmanageDevice doesn't seem to have any effect on the link database
+				*/
+				if(req.body.action === 'addNewDevice'){
+					let result = await PLMConfigNode.plm!.manageDevice(address);
+					let messageVerb = "linked";
+					/* Get device info after we've added it */
+					// let deviceInfo = await PLMConfigNode.plm!.queryDeviceInfo(address);
+				}else if(req.body.action === 'removeDevice'){
+					/* Get device info before we remove it */
+					// let deviceInfo = await PLMConfigNode.plm!.queryDeviceInfo(address);
+					let result = await PLMConfigNode.plm!.unmanageDevice(address);
+					let messageVerb = "un-linked";
+				}else{
+					throw new Error("Invalid action");
+				}
+
+				let links = await PLMConfigNode.plm!.syncLinks();
+
+				res.json({
+					result: result,
+					links: links,
+					// deviceInfo: deviceInfo,
+					// message: `Device ${deviceInfo.description} was ${messageVerb}`
+					message: `Device was ${messageVerb}`
+				});
+			}catch(e){
+				res.json({
+					error: true,
+					caught: e,
+					message: "Failed to update links"
+				});
+				return;
+			}
+
+			/* Send the links back to the client */
+			res.json({
+				links: PLMConfigNode.plm!.links
+			});
+			
+		}
+	);
+	
 };
 
 /* Connection Function */
@@ -140,4 +202,36 @@ function removeOldPLM(node: PLMConfigNode){
 		// Killing ref
 		delete node.plm;
 	}
+}
+
+/* Function that takes a node.id and returns the node if it is valid
+	The node must be a PLMConfig node, and the PLM must be connected
+*/
+function validatePLMConnection(RED: Red, configNodeId: string, res: any){
+	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
+	let PLMConfigNode = RED.nodes.getNode(configNodeId) as PLMConfigNode;			
+	
+	/* Validate that the nodeId received is referencing a PLMConfig node */
+	if(PLMConfigNode.type !== 'PLMConfig'){
+		res.json({
+			error: true,
+			message: "Invalid config node specified."
+		});
+		
+		return null;
+	}
+	
+	/* Check to see if the Config Node is connected to the PLM. If the node hasn't been deployed yet, it won't be connected
+		The best thing would be to connect, get/return the links then disconnect, but for now we will just send an error
+	*/
+	if(PLMConfigNode.plm === null || !PLMConfigNode.plm!.connected){
+		res.json({
+			error: true,
+			message: "The PLM is not connected. Cannot load links."
+		});
+		
+		return null;			
+	}
+	
+	return PLMConfigNode;
 }
