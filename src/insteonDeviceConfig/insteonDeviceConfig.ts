@@ -22,20 +22,20 @@ interface DeviceConfigNodeProps extends NodeProperties{
 export = function(RED: Red){
 	/* Fired on every deploy */
 	/* Registering node type and a constructor */
-	RED.nodes.registerType('insteon-device-config', async function(this: insteonDeviceConfigNode, config: DeviceConfigNodeProps){
+	RED.nodes.registerType('insteon-device-config', function(this: insteonDeviceConfigNode, config: DeviceConfigNodeProps){
 		/* Creating actual node */
 		RED.nodes.createNode(this, config);
-		
+
 		let node = this;
-				
+
 		/* Turn the address string the user typed into the gui into an array of hex */
-		node.address = config.address.toUpperCase().split(".").map((el: string) => parseInt("0x"+el,16) as Byte);
-				
+		// node.address = config.address.toUpperCase().split(".").map((el: string) => parseInt("0x"+el,16) as Byte);
+
 		if(!Array.isArray(node.address)){
 			/* Stopping */
 			return;
 		}
-		
+
 		/* Checking if we don't have a modem */
 		if(!config.modem){
 			/* Stopping execution */
@@ -46,11 +46,10 @@ export = function(RED: Red){
 		node.PLMConfigNode = RED.nodes.getNode(config.modem) as PLMConfigNode;
 
 		/* Instanciate the device */
-		node.device = await node.PLMConfigNode.plm!.getDeviceInstance(node.address, {debug: true, syncInfo: true, syncLinks: false});
-		// node.device = new InsteonDevice(["1","2",3], node.PLMConfigNode.plm, {debug: true});
-		
+		// node.device = await node.PLMConfigNode.plm!.getDeviceInstance(node.address, {debug: false, syncInfo: true, syncLinks: false});
+
 		// console.log("device string address:", "soon");
-		
+
 
 		// /* Send a product data request message to the device to find out what it is */
 		// getDeviceInfo(node.PLMConfigNode.plm).then(res,err){
@@ -60,7 +59,7 @@ export = function(RED: Red){
 		// let deviceInfo = await node.PLMConfigNode.plm.sendStandardCommand(node.address,0x00,0x03,0x00);
 		// console.log(deviceInfo);
 		// deviceTypes.filter()
-		
+
 		/* subscribe to packets addressed from the device */
 		// node.PLMConfigNode.plm.on(["**",node.stringAddress], function(packet){
 		// 	node.warn(`got packet from ${node.stringAddress}`);

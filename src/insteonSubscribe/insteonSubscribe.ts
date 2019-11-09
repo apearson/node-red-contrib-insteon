@@ -101,14 +101,14 @@ export = function(RED: Red){
 			}
 		};
 
-		/* Add the event listener */
-		node.PLMConfigNode.plm.on(["**",node.deviceConfigNode.stringAddress], filterPacket);
-
-		/* Remove the event listener whenever the user modifies the node config or deletes the node */
-		node.on('close', function(removed: boolean, done: () => void){
-			node.PLMConfigNode.plm.removeListener(["**",node.deviceConfigNode.stringAddress],filterPacket);
-			done();
-		});	
+		// /* Add the event listener */
+		// node.PLMConfigNode.plm.on(["**",node.deviceConfigNode.stringAddress], filterPacket);
+		//
+		// /* Remove the event listener whenever the user modifies the node config or deletes the node */
+		// node.on('close', function(removed: boolean, done: () => void){
+		// 	node.PLMConfigNode.plm.removeListener(["**",node.deviceConfigNode.stringAddress],filterPacket);
+		// 	done();
+		// });
 	});
 };
 
