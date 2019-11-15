@@ -16,15 +16,15 @@ interface SubscribeConfigNodeProps extends NodeProperties{
 
 
 /* Exporting Node Function */
-export = function(RED: Red){		
+export = function(RED: Red){
 	/* Fired on every deploy */
 	/* Registering node type and a constructor */
-	RED.nodes.registerType('subscribe', function(this: SubscribeNode, config: SubscribeConfigNodeProps){		
+	RED.nodes.registerType('subscribe', function(this: SubscribeNode, config: SubscribeConfigNodeProps){
 		/* Creating actual node */
 		RED.nodes.createNode(this, config);
-		
+
 		let node = this as any;
-		
+
 		/* Clear the status */
 		node.status({});
 
@@ -36,7 +36,7 @@ export = function(RED: Red){
 			/* Stopping execution */
 			return;
 		}
-		
+
 		/* See which events the user subscribed to */
 		let selectedEvents = config.selectedEvents.map((el: any) => {
 			return {
@@ -45,21 +45,21 @@ export = function(RED: Red){
 				cmd2: parseInt(el.cmd2,16)
 			}
 		});
-		
+
 		let subtype = parseInt(config.subtype,16);
-		
+
 		/* Retrieve the device config node */
 		node.deviceConfigNode = RED.nodes.getNode(config.device);
-		
+
 		/* Retrieve the PLM config node */
-		node.PLMConfigNode = node.deviceConfigNode.PLMConfigNode;		
+		node.PLMConfigNode = node.deviceConfigNode.PLMConfigNode;
 
 		/* Subscribe to the device's events
-		   filterPacket to only send the nodes that match the events that the user selected to subscribe to		   
+		   filterPacket to only send the nodes that match the events that the user selected to subscribe to
 		*/
 		const filterPacket = async (packet: Packet.Packet) => {
 			// console.log('filter packet', packet);
-			
+
 			let matchedEvent = selectedEvents.filter((el: eventSelection) => {
 				return el.cmd1 === packet.cmd1
 					&&
@@ -71,7 +71,7 @@ export = function(RED: Red){
 						|| (subtype === packet.Flags.subtype)
 					)
 			});
-			
+
 			/* If this device is a dimmer, send a 0x19 status request to get the light's current brightness level so it can be included in the msg
 				Device type logic not impelemented yet
 			*/
@@ -83,9 +83,9 @@ export = function(RED: Red){
 					// let level = await node.PLMConfigNode.plm.sendStandardCommand(node.deviceConfigNode.address, undefined, 0x19, undefined);
 					// console.log('done awaiting');
 					// console.log("level",level);
-				
-				
-				
+
+
+
 				node.send({
 					topic: node.deviceConfigNode.name,
 					payload: {
@@ -94,7 +94,7 @@ export = function(RED: Red){
 					},
 					packet: packet
 				});
-				
+
 				}
 			}else{
 				// node.send({topic: "no match", packet: packet});

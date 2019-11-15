@@ -14,12 +14,12 @@
 					let devices = [];
 					RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : "");
 					let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === v.toLowerCase());
-					
+
 					if(duplicate.length > 0){
 						duplicate[0].dirty = true;
 						duplicate[0].highlighted = true;
 						RED.view.redraw();
-						
+
 						alert("`"+duplicate[0].name + "` is already using this address.");
 						return false;
 					}else{
@@ -63,8 +63,8 @@
 <script type="text/x-red" data-help-name="insteon-device-config">
 	<h3>Info</h3>
 	<p>Represents one physical insteon device.</p>
-	
+
 	<p>Drag this node onto the pallet, assign it the insteon device ID and give it a name. </p>
-	
+
 	<p>The node will keep track of the current state of the physical device.</p>
 </script>

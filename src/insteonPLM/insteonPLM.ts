@@ -98,7 +98,7 @@ async function onInput(msg: any, node: PLMNode){
 
 			case 'addLink': msgOut = await addLink(msg, plm); break;
 			case 'deleteLink': msgOut = await deleteLink(msg, plm); break;
-			
+
 			case 'startLinking': msgOut = await startLinking(msg, plm); break;
 			case 'stopLinking': msgOut = await stopLinking(msg, plm); break;
 

@@ -31,7 +31,7 @@ export = function(RED: Red){
 
 		/* Setting up PLM */
 		setupPLM(this);
-		
+
 	});
 
 	/* Setting up server to get serial nodes */
@@ -40,7 +40,7 @@ export = function(RED: Red){
 		RED.auth.needsPermission('serial.read'),   // Permission
 		getInsteonPorts                            // Get Devices as JSON
 	);
-	
+
 	/* Server to provide the PLM's Link database
 	 * The ajax call to this node must post the node_id of the modem config node
 	 */
@@ -49,7 +49,7 @@ export = function(RED: Red){
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => getInsteonLinks(RED, req, res)
 	);
-	
+
 
 	/* Server to link or unlink a device from the PLM's Link database
 	 * The ajax call to this node must post the node_id of the modem config node
@@ -63,7 +63,7 @@ export = function(RED: Red){
 
 /* Connection Function */
 function setupPLM(node: PLMConfigNode){
-	
+
 	/* Removing old PLM */
 	removeOldPLM(node);
 
@@ -134,7 +134,7 @@ async function getInsteonLinks(RED: Red, req: any, res: any){
 async function manageDevice(RED: Red, req: any, res: any){
 	let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId, res);
 	let message = "";
-		
+
 	/* Validate the device address */
 	let address = Utilities.toAddressArray(req.body.address) as Byte[];
 	if(address.length !== 3){
@@ -144,10 +144,10 @@ async function manageDevice(RED: Red, req: any, res: any){
 		});
 		return;
 	}
-	
+
 	try{
 		/* Something strange is happening here -
-			queryDeviceInfo only works sometimes, othertimes it hangs indefinitely 
+			queryDeviceInfo only works sometimes, othertimes it hangs indefinitely
 			unmanageDevice doesn't seem to have any effect on the link database
 		*/
 
@@ -204,18 +204,18 @@ function removeOldPLM(node: PLMConfigNode){
  */
 function validatePLMConnection(RED: Red, configNodeId: string, res: any){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
-	let PLMConfigNode = RED.nodes.getNode(configNodeId) as PLMConfigNode;			
-	
+	let PLMConfigNode = RED.nodes.getNode(configNodeId) as PLMConfigNode;
+
 	/* Validate that the nodeId received is referencing a PLMConfig node */
 	if(PLMConfigNode.type !== 'PLMConfig'){
 		res.json({
 			error: true,
 			message: "Invalid config node specified."
 		});
-		
+
 		return null;
 	}
-	
+
 	/* Check to see if the Config Node is connected to the PLM. If the node hasn't been deployed yet, it won't be connected
 	 * The best thing would be to connect, get/return the links then disconnect, but for now we will just send an error
 	 */
@@ -224,9 +224,9 @@ function validatePLMConnection(RED: Red, configNodeId: string, res: any){
 			error: true,
 			message: "The PLM is not connected. Cannot load links."
 		});
-		
+
 		return null;
 	}
-	
+
 	return PLMConfigNode;
 }
