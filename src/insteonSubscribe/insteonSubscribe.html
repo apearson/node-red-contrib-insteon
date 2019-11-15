@@ -13,9 +13,7 @@
 		inputs:0,
 		outputs:1,
 		icon: 'arrow.png',
-		label: function() {
-			return this.name || 'subscribe';
-		},
+		label: _ => this.name || 'Subscribe',
 		oneditprepare: function(){
 			var node = this;
 			// Select the value in the subtype drop down

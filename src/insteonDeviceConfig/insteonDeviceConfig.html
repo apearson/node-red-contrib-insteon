@@ -1,5 +1,7 @@
 <!-- Node Registration -->
 <script type="text/javascript">
+
+	/** Type Registration **/
 	RED.nodes.registerType('insteon-device-config',{
 		category: 'config',
 		color: '#2e88c5',
@@ -7,40 +9,41 @@
 		defaults: {
 			modem: { value:'', type:'PLMConfig' },
 			name: { value: '' },
-			address: {
-				value: '',
-				validate: function(v){
-					/* Check to see if this devie address was used in another node */
-					let devices = [];
-					RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : "");
-					let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === v.toLowerCase());
-
-					if(duplicate.length > 0){
-						duplicate[0].dirty = true;
-						duplicate[0].highlighted = true;
-						RED.view.redraw();
-
-						alert("`"+duplicate[0].name + "` is already using this address.");
-						return false;
-					}else{
-						/* Clear the red highlighted nodes */
-						devices.forEach(device => {
-							device.dirty = true;
-							device.highlighted = false;
-							RED.view.redraw();
-						});
-						return true;
-					}
-				}
-			}
+			address1: { value: '', validate },
+			address2: { value: '', validate },
+			address3: { value: '', validate },
 		},
 		inputs:0,
 		outputs:0,
 		icon: 'light.png',
-		label: function() {
-			return this.name || 'Device';
-		}
+		label: _ => this.name || 'Device'
 	});
+
+	/* Helper functions */
+	function validate(v){
+		/* Check to see if this devie address was used in another node */
+		let devices = [];
+		RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : "");
+		let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === v.toLowerCase());
+
+		if(duplicate.length > 0){
+			duplicate[0].dirty = true;
+			duplicate[0].highlighted = true;
+			RED.view.redraw();
+
+			alert("`"+duplicate[0].name + "` is already using this address.");
+			return false;
+		}else{
+			/* Clear the red highlighted nodes */
+			devices.forEach(device => {
+				device.dirty = true;
+				device.highlighted = false;
+				RED.view.redraw();
+			});
+			return true;
+		}
+	}
+
 </script>
 
 <!-- Node Configuration -->
@@ -55,7 +58,9 @@
 	</div>
 	<div class="form-row">
 		<label for="node-config-input-address"><i class="icon-tag"></i>Address</label>
-		<input type="text" id="node-config-input-address" placeholder="aa.bb.cc" />
+		<input type="text" style="width: 23%" id="node-config-input-address1" placeholder="aa" /> .
+		<input type="text" style="width: 23%" id="node-config-input-address2" placeholder="bb" /> .
+		<input type="text" style="width: 23%" id="node-config-input-address3" placeholder="cc" />
 	</div>
 </script>
 
