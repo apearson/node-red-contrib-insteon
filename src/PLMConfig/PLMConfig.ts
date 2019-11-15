@@ -84,20 +84,23 @@ export = function(RED: Red){
 			}
 			
 			try{
+				let result;
+				let messageVerb = "";
+				
 				/* Something strange is happening here -
 					queryDeviceInfo only works sometimes, othertimes it hangs indefinitely 
 					unmanageDevice doesn't seem to have any effect on the link database
 				*/
 				if(req.body.action === 'addNewDevice'){
-					let result = await PLMConfigNode.plm!.manageDevice(address);
-					let messageVerb = "linked";
+					result = await PLMConfigNode.plm!.manageDevice(address);
+					messageVerb = "linked";
 					/* Get device info after we've added it */
 					// let deviceInfo = await PLMConfigNode.plm!.queryDeviceInfo(address);
 				}else if(req.body.action === 'removeDevice'){
 					/* Get device info before we remove it */
 					// let deviceInfo = await PLMConfigNode.plm!.queryDeviceInfo(address);
-					let result = await PLMConfigNode.plm!.unmanageDevice(address);
-					let messageVerb = "un-linked";
+					result = await PLMConfigNode.plm!.unmanageDevice(address);
+					messageVerb = "un-linked";
 				}else{
 					throw new Error("Invalid action");
 				}
