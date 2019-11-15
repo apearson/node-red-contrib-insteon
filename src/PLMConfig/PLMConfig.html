@@ -6,6 +6,11 @@
 			path: { value: '', required: true }
 		},
 		oneditprepare: function(){
+			let node = this;
+
+			$("#accordion").accordion({heightStyle: "fill"});
+
+			/* PLM Path UI */
 			try { $("#node-config-input-path").autocomplete( "destroy" ); }
 			catch(err) { }
 
@@ -28,11 +33,161 @@
 							$("#node-config-input-path").autocomplete(autoConfig).autocomplete("search","");
 					});
 			});
+			
+			/* PLM links table */
+			/* Get the modem's links. */
+			$.ajax({
+				method: "post",
+				dataType: "json",
+				url: "insteon-plm-getlinks",
+				data: {
+					configNodeId: node.id,
+					path: node.path
+				},
+				success: function(data){
+					if(data.error){
+						sendErrorToDebugConsole(node.id,data.message);
+						return;
+					}
+					
+					updateLinksTable(data.links);
+				},
+				error: function(error){
+					sendErrorToDebugConsole(node.id,error);					
+				}
+			});
+			
+			/* Add device UI */
+			$("#add_device").click(function(e){
+				e.preventDefault();
+				submitAddress(node,"addNewDevice",$("#new_device_address").val());
+			});
+
+			/* Remove device UI */
+			$("#remove_device").click(function(e){
+				e.preventDefault();
+				submitAddress(node,"removeDevice",$("#device_address_to_remove").val());				
+			});
 		},
 		label: function() {
-			return this.path;
+			return this.path || "PLM Config";
 		}
 	});
+	
+	/* This is not conventional, but we need a way to output error messages to the debug window in case the ajax call fails
+		node.error() is not in context for ajax calls	
+	*/
+	function sendErrorToDebugConsole(name,message){
+		RED.debug.handleDebugMessage({name:name,msg:message, level: 20});					
+	}
+	
+	/* Render an HTML table containing all of the link data from the modem
+		In parallel, render the select drop down in the remove device panel
+	 */
+	function updateLinksTable(links){
+		let devices = [];
+		RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : "");
+
+		$("#linkMessage").hide();
+		
+		$("#links").empty();
+		$("#device_address_to_remove").empty();
+		
+		
+		links.forEach(link => {
+			/* Get the linked device's configuration node, if there is one */
+			let deviceConfigNode = getDeviceNode(link.device);
+
+			/* Create the table cell for the device. If the device has a config node,
+				make it a clickable link to take the user to the edit panel for the 
+				deviceConfig node.
+			*/
+			let deviceCell = $('<td>',{style:"white-space:nowrap"});
+			if(deviceConfigNode === null){
+				deviceCell.text(`${addressToString(link.device)}`);
+			}else{
+				$("<a>", {
+					href: "#",
+					html: `${addressToString(link.device)}: ${deviceConfigNode.name}`,
+					click: function(e){
+		                e.preventDefault();
+						RED.editor.editConfig("", 'insteon-device-config', deviceConfigNode.id);
+					}
+				}).appendTo(deviceCell);
+			}
+
+			/* Create the table row */
+			let row = $("<tr/>");
+			$('<td>',{style:"white-space:nowrap"}).text(link.type === 1 ? "Controller" : "Responder").appendTo(row);
+			deviceCell.appendTo(row);
+			$('<td>',{style:"white-space:nowrap"}).text(link.group).appendTo(row);
+			$('<td>',{style:"white-space:nowrap"}).text("").appendTo(row);			
+			row.appendTo($("#links"));
+			
+			
+			/* Now populate the select options in the remove device drop down */
+			let optionText = deviceConfigNode === null ? addressToString(link.device) : `${addressToString(link.device)}: ${deviceConfigNode.name}`;
+			$('<option/>', {
+				value: `${addressToString(link.device)}`,
+				html: optionText
+			}).appendTo($("#device_address_to_remove"));
+			
+		}); // End links.forEach
+	}
+	
+	/* Add New Insteon Device */
+	function submitAddress(node,action,address){
+		$("#add_device,#remove_device").prop('disabled', true);
+		
+		/* Submit the ajax request */
+		$.ajax({
+			method: "post",
+			dataType: "json",
+			url: "insteon-plm-manage-device",
+			data: {
+				configNodeId: node.id,
+				action: action,
+				address: address
+			},
+			success: function(data){
+				$("#add_device,#remove_device").prop('disabled', false);
+								
+				if(data.error){
+					sendErrorToDebugConsole(node.id,data.message);
+					return;
+				}
+				
+				alert(data.message);
+				
+				$("#new_device_address").val("");
+				updateLinksTable(data.links);
+
+			},
+			error: function(error){
+				$("#add_device,#remove_device").prop('disabled', false);
+				
+				sendErrorToDebugConsole(node.id,error);					
+			}
+		});
+		
+	}
+	
+	/* Utilities */
+	/* Make a hex string for a Byte array */
+	function addressToString(address){
+		return address.map(num => num.toString(16).toUpperCase().padStart(2, '0')).join('.');
+	}
+	
+	/* Lookup the device node and return it based on an insteon device address */
+	function getDeviceNode(address){
+		if(Array.isArray(address)) address = addressToString(address);
+		
+		let devices = [];
+		RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : "");
+		
+		let match = devices.filter(d => d.address.toUpperCase() === address.toUpperCase())[0];
+		return match ? match : null;
+	}
 </script>
 
 <!-- Node Configuration -->
@@ -42,6 +197,46 @@
 		<input type="text" id="node-config-input-path" style="width:66%;">
 		<a id="node-config-lookup-modems" class="btn"><i id="node-config-lookup-modems-icon" class="fa fa-search"></i></a>
 	</div>
+	<div class="form-row" style="height: 500px">
+	
+	<div id="accordion">
+	  <h3>PLM Insteon Link Database</h3>
+	  <div>
+		<p id="linkMessage">Links can only be displayed after the PLM is connected.</p>
+		<table width="100%">
+			<thead>
+				<tr>
+					<th style="text-align: left;">Type</th>
+					<th style="text-align: left;">Device</th>
+					<th style="text-align: left;">Group</th>
+					<th style="text-align: left;">&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody id="links">
+			</tbody>
+		</table>
+	  </div>
+	  
+	  <h3>Add New Device</h3>
+	  <div>
+		  <p>Links a new device with your PLM. If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
+		  <p>After a new device is linked with the PLM, you can configure the device from the Subscribe or Command nodes.</p>
+		  <input id="new_device_address" type="text" placeholder="AA.BB.CC" />
+		  <button id="add_device" class="btn">Add Device</button>
+	  </div>
+
+	  <h3>Remove Device</h3>
+	  <div>
+	  	<p>Removes the controller & responder links from both the device and the PLM.</p>
+		<p>If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
+	  	<select id="device_address_to_remove"></select>
+		<button id="remove_device" class="btn">Remove Device</button>
+	  </div>
+
+	</div> <!-- End accordion -->
+	
+	</div>
+	
 </script>
 
 <!-- Help Panel -->
@@ -51,5 +246,5 @@
 	<p>The search button should return a list of available Insteon PowerLinc Modems to choose from, or you can type in the location if known.</p>
 	
 	<h3>Example</h3>
-	<p>/dev/insteon</p>
+	<p>/dev/ttyUSB0</p>
 </script>
