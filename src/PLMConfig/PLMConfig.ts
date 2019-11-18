@@ -2,7 +2,7 @@
 import { Red, NodeProperties } from 'node-red';
 import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
 import { PLMConfigNode } from '../types/types';
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 
 /* Interfaces */
 interface PLMConfigNodeProps extends NodeProperties{

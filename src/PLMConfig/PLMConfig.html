@@ -243,7 +243,9 @@
 			path: { value: '', required: true }
 		},
 		oneditprepare: function(){ return oneditprepare(this); },
-		label: _ => this.path || 'PLM Config'
+		label: function(){
+			return this.path || 'PLM Config'
+		}
 	});
 
 </script>
