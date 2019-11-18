@@ -7,19 +7,20 @@
 		color: '#2e88c5',
 		align: 'left',
 		defaults: {
-			modem: { value:'', type:'PLMConfig' },
+			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' },
 			address1: { value: '', validate },
 			address2: { value: '', validate },
 			address3: { value: '', validate },
 		},
-		inputs:0,
-		outputs:0,
+		inputs: 0,
+		outputs: 0,
 		icon: 'light.png',
-		label: function(){ return this.name || 'Device' }
+		label: function(){ return this.name || 'Insteon Device' }
 	});
 
-	/* Helper functions */
+	//#region Utility Methods
+
 	function validate(v){
 		/* Check to see if this devie address was used in another node */
 		let devices = [];
@@ -33,7 +34,8 @@
 
 			alert("`"+duplicate[0].name + "` is already using this address.");
 			return false;
-		}else{
+		}
+		else{
 			/* Clear the red highlighted nodes */
 			devices.forEach(device => {
 				device.dirty = true;
@@ -43,6 +45,8 @@
 			return true;
 		}
 	}
+
+	//#endregion
 
 </script>
 

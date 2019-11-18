@@ -1,28 +1,26 @@
 /*
-The purpose of this deviceConfig node is to represent a physical insteon device and allow the user to:
-- Give the device a friendly name
-- Know what the basic device type is (dimmer switch, on/off switch, motion sensor, i/o linc, etc)
-- Set the device preferences (e.g. on level, ramp rate)
-- Manage the devices link database
-
-Internally the node will also track the devices real world state and emit events when those states change
+* The purpose of this deviceConfig node is to represent a physical insteon device and allow the user to:
+* - Give the device a friendly name
+* - Know what the basic device type is (dimmer switch, on/off switch, motion sensor, i/o linc, etc)
+* - Set the device preferences (e.g. on level, ramp rate)
+* - Manage the devices link database
+*
+* Internally the node will also track the devices real world state and emit events when those states change
 */
 
 import { Red, NodeProperties } from 'node-red';
-import { PLMConfigNode, insteonDeviceConfigNode } from '../types/types';
-import { Byte } from 'insteon-packet-parser';
+import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../types/types';
 
 interface DeviceConfigNodeProps extends NodeProperties{
 	modem: string;
 	address: string;
 }
 
-
 /* Exporting Node Function */
 export = function(RED: Red){
 	/* Fired on every deploy */
 	/* Registering node type and a constructor */
-	RED.nodes.registerType('insteon-device-config', function(this: insteonDeviceConfigNode, config: DeviceConfigNodeProps){
+	RED.nodes.registerType('insteon-device-config', function(this: InsteonDeviceConfigNode, config: DeviceConfigNodeProps){
 		/* Creating actual node */
 		RED.nodes.createNode(this, config);
 
@@ -43,7 +41,7 @@ export = function(RED: Red){
 		}
 
 		/* Retrieve the PLMConfigNode */
-		node.PLMConfigNode = RED.nodes.getNode(config.modem) as PLMConfigNode;
+		node.PLMConfigNode = RED.nodes.getNode(config.modem) as InsteonModemConfigNode;
 
 		/* Instanciate the device */
 		// node.device = await node.PLMConfigNode.plm!.getDeviceInstance(node.address, {debug: false, syncInfo: true, syncLinks: false});

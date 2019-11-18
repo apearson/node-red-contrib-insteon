@@ -4,21 +4,21 @@ import PLM, { InsteonDevice } from 'insteon-plm';
 import { Byte } from 'insteon-packet-parser';
 
 /* Types */
-interface PLMConfigNode extends Node {
+interface InsteonModemConfigNode extends Node {
 	path: string;
 	errored: boolean;
 	plm?: PLM;
 }
 
-interface PLMNode extends Node {
-	PLMConfigNode: PLMConfigNode;
+interface ModemNode extends Node {
+	PLMConfigNode: InsteonModemConfigNode;
 }
 
 interface SubscribeNode extends Node {
 }
 
-interface insteonDeviceConfigNode extends Node {
+interface InsteonDeviceConfigNode extends Node {
 	address: Byte[];
-	PLMConfigNode: PLMConfigNode;
+	PLMConfigNode: InsteonModemConfigNode;
 	device: InsteonDevice;
 }

@@ -5,7 +5,7 @@
 		color: '#2e88c5',
 		align: 'right',
 		defaults: {
-			modem: { value:'', type:'PLMConfig' },
+			modem: { value:'', type:'insteon-modem-config' },
 			name: { value: '' }
 		},
 		inputs:1,
@@ -13,7 +13,7 @@
 		icon: 'bridge-dash.png',
 		label: function() {
 			var modemNode = RED.nodes.node(this.modem);
-			let modemLabel = modemNode !== null ? modemNode.label() : 'Insteon PLM';
+			let modemLabel = modemNode !== null ? modemNode.label : 'Insteon PLM';
 
 			return this.name || modemLabel;
 		}

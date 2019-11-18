@@ -57,6 +57,10 @@
 	 */
 	const renderLinksTable = (links) => {
 
+		// If no links then do nothing
+		if(links.length === 0)
+			return;
+
 		// Getting all device config nodes
 		let devices = [];
 		RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : '');
@@ -237,21 +241,21 @@
 	//#endregion
 
 	/** Type Registration **/
-	RED.nodes.registerType('PLMConfig',{
+	RED.nodes.registerType('insteon-modem-config',{
 		category: 'config',
 		defaults: {
 			path: { value: '', required: true }
 		},
 		oneditprepare: function(){ return oneditprepare(this); },
 		label: function(){
-			return this.path || 'PLM Config'
+			return this.path || 'Insteon Modem'
 		}
 	});
 
 </script>
 
 <!-- Node Configuration -->
-<script type='text/x-red' data-template-name='PLMConfig'>
+<script type='text/x-red' data-template-name='insteon-modem-config'>
 	<div class='form-row'>
 		<label for='node-config-input-path'>Path</label>
 		<input type='text' id='node-config-input-path' style='width:66%;'>
@@ -300,7 +304,7 @@
 </script>
 
 <!-- Help Panel -->
-<script type='text/x-red' data-help-name='PLMConfig'>
+<script type='text/x-red' data-help-name='insteon-modem-config'>
 	<h3>Info</h3>
 	<p>Provides configuration options for a Insteon modem</p>
 	<p>The search button should return a list of available Insteon PowerLinc Modems to choose from, or you can type in the location if known.</p>

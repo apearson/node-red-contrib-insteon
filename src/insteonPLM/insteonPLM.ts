@@ -1,6 +1,6 @@
 /* Importing types */
 import { Red, NodeProperties } from 'node-red';
-import { PLMNode, PLMConfigNode } from '../types/types';
+import { ModemNode, InsteonModemConfigNode } from '../types/types';
 import PLM, { Packet } from 'insteon-plm';
 
 interface insteonPLMProps extends NodeProperties{
@@ -10,7 +10,7 @@ interface insteonPLMProps extends NodeProperties{
 /* Exporting Node Function */
 export = function(RED: Red){
 	/* Registering node type and a constructor*/
-	RED.nodes.registerType('Insteon-PLM', function(this: PLMNode, props: insteonPLMProps){
+	RED.nodes.registerType('Insteon-PLM', function(this: ModemNode, props: insteonPLMProps){
 
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
@@ -25,7 +25,7 @@ export = function(RED: Red){
 		}
 
 		/* Retrieve the config node */
-		this.PLMConfigNode = RED.nodes.getNode(props.modem) as PLMConfigNode;
+		this.PLMConfigNode = RED.nodes.getNode(props.modem) as InsteonModemConfigNode;
 
 		/* Setting up PLM events */
 		this.PLMConfigNode.on('connected', ()=> onConnected(this));
@@ -45,26 +45,26 @@ export = function(RED: Red){
 };
 
 /* Connection Function */
-function onConnected(node: PLMNode){
+function onConnected(node: ModemNode){
 	/* Setting connected status */
 	node.status({fill: 'green', shape: 'dot', text: 'Connected'});
 }
-function onDisconnected(node: PLMNode){
+function onDisconnected(node: ModemNode){
 	/* Setting connected status */
 	node.status({fill: 'red', shape: 'dot', text: 'Disconnected'});
 }
-function onError(node: PLMNode, error: Error){
+function onError(node: ModemNode, error: Error){
 	/* If PLM got disconnected, reconnect */
 	if(node.PLMConfigNode.plm && node.PLMConfigNode.plm.connected){
 		node.status({fill: 'red', shape: 'ring', text: 'Errored'});
 	}
 }
-function onPacket(node: PLMNode, packet: Packet.Packet){
+function onPacket(node: ModemNode, packet: Packet.Packet){
 	node.send({topic: 'packet', payload: packet});
 }
 
 /* Node RED Processing */
-async function onInput(msg: any, node: PLMNode){
+async function onInput(msg: any, node: ModemNode){
 	/* Output holder */
 	let msgOut: any = {};
 

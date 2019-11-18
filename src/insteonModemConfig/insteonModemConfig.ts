@@ -1,11 +1,11 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
 import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
-import { PLMConfigNode } from '../types/types';
+import { InsteonModemConfigNode } from '../types/types';
 import { Request, Response } from 'express';
 
 /* Interfaces */
-interface PLMConfigNodeProps extends NodeProperties{
+interface PLMConfigNodeProps extends NodeProperties {
 	path: string;
 }
 
@@ -18,7 +18,7 @@ export = function(RED: Red){
 	reconnectTime = RED.settings.serialReconnectTime || 15000;
 
 	/* Registering node type and a constructor*/
-	RED.nodes.registerType('PLMConfig', function(this: PLMConfigNode, props: PLMConfigNodeProps){
+	RED.nodes.registerType('insteon-modem-config', function(this: InsteonModemConfigNode, props: PLMConfigNodeProps){
 
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
@@ -62,7 +62,7 @@ export = function(RED: Red){
 };
 
 /* Connection Function */
-function setupPLM(node: PLMConfigNode){
+function setupPLM(node: InsteonModemConfigNode){
 
 	/* Removing old PLM */
 	removeOldPLM(node);
@@ -79,7 +79,7 @@ function setupPLM(node: PLMConfigNode){
 }
 
 /* Event Functions */
-function onConnected(node: PLMConfigNode){
+function onConnected(node: InsteonModemConfigNode){
 	node.log('Connected');
 
 	node.errored = false;
@@ -87,7 +87,7 @@ function onConnected(node: PLMConfigNode){
 	/* Emitting Status */
 	node.emit('connected');
 }
-function onDisconnected(node: PLMConfigNode){
+function onDisconnected(node: InsteonModemConfigNode){
 	node.log('Disconnected');
 
 	/* Emitting Status */
@@ -96,7 +96,7 @@ function onDisconnected(node: PLMConfigNode){
 	/* Setting up reconnection */
 	setTimeout(_ => setupPLM(node), reconnectTime)
 }
-function onError(node: PLMConfigNode, error: Error){
+function onError(node: InsteonModemConfigNode, error: Error){
 
 	if(!node.errored){
 		node.errored = true;
@@ -109,11 +109,11 @@ function onError(node: PLMConfigNode, error: Error){
 	/* Setting up reconnection */
 	setTimeout(_ => setupPLM(node), reconnectTime);
 }
-function onPacket(node: PLMConfigNode, packet: Packet.Packet){
+function onPacket(node: InsteonModemConfigNode, packet: Packet.Packet){
 	/* Emitting Packet */
 	node.emit('packet', packet);
 }
-function onNodeClose(node: PLMConfigNode){
+function onNodeClose(node: InsteonModemConfigNode){
 	/* Closing PLM */
 	removeOldPLM(node);
 }
@@ -127,20 +127,23 @@ async function getInsteonLinks(RED: Red, req: Request, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	let PLMConfigNode = validatePLMConnection(RED, req.query.id, res);
 
-	if(PLMConfigNode != null){
+	if(PLMConfigNode){
 		/* Send the links back to the client */
 		res.json(PLMConfigNode?.plm?.links ?? []);
 	}
 }
 async function manageDevice(RED: Red, req: Request, res: Response){
 	let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId, res);
-	let message = "";
+
+	if(!PLMConfigNode)
+		return;
 
 	/* Validate the device address */
 	let address = Utilities.toAddressArray(req.body.address) as Byte[];
 	if(address.length !== 3){
+		// Server side failure
+		res.status(400);
 		res.json({
-			error: true,
 			message: "Invalid Insteon device address. Please use format `AA.BB.CC`"
 		});
 		return;
@@ -178,17 +181,19 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 			message: `Device was ${messageVerb}`
 		});
 	} catch(e){
+		// Server side failure
+		res.status(500);
+
 		res.json({
-			error: true,
-			caught: e,
-			message: "Failed to update links"
+			message: "Failed to update links",
+			caught: e
 		});
 		return;
 	}
 }
 
 /* Clean up functions */
-function removeOldPLM(node: PLMConfigNode){
+function removeOldPLM(node: InsteonModemConfigNode){
 	// Removing all listeners
 	node.plm?.removeAllListeners();
 
@@ -205,28 +210,31 @@ function removeOldPLM(node: PLMConfigNode){
  */
 function validatePLMConnection(RED: Red, configNodeId: string, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
-	let PLMConfigNode = RED.nodes.getNode(configNodeId) as PLMConfigNode;
+	let PLMConfigNode = RED.nodes.getNode(configNodeId) as InsteonModemConfigNode;
 
 	/* Validate that the nodeId received is referencing a PLMConfig node */
-	if(PLMConfigNode == null || PLMConfigNode.type !== 'PLMConfig' ){
-		res.json({
-			error: true,
-			message: "Invalid config node specified."
-		});
+	if(PLMConfigNode == null || PLMConfigNode.type !== 'insteon-modem-config' ){
+		// Setting status to server side error
+		res.status(500);
 
-		return null;
+		// Sending error message
+		res.json({ message: "Invalid config node specified." });
+
+		//
+		return false;
 	}
 
 	/* Check to see if the Config Node is connected to the PLM. If the node hasn't been deployed yet, it won't be connected
 	 * The best thing would be to connect, get/return the links then disconnect, but for now we will just send an error
 	 */
 	if(PLMConfigNode.plm === null || !PLMConfigNode.plm?.connected){
-		res.json({
-			error: true,
-			message: "The PLM is not connected. Cannot load links."
-		});
+		// Setting status to server side error
+		res.status(500);
 
-		return null;
+		// Sending error message
+		res.json({ message: "The PLM is not connected. Cannot load links." });
+
+		return false;
 	}
 
 	return PLMConfigNode;
