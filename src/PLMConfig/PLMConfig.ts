@@ -2,6 +2,7 @@
 import { Red, NodeProperties } from 'node-red';
 import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
 import { PLMConfigNode } from '../types/types';
+import { Request, Response, NextFunction } from 'express';
 
 /* Interfaces */
 interface PLMConfigNodeProps extends NodeProperties{
@@ -44,12 +45,11 @@ export = function(RED: Red){
 	/* Server to provide the PLM's Link database
 	 * The ajax call to this node must post the node_id of the modem config node
 	 */
-	RED.httpAdmin.post(
+	RED.httpAdmin.get(
 		"/insteon-plm-getlinks",
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => getInsteonLinks(RED, req, res)
 	);
-
 
 	/* Server to link or unlink a device from the PLM's Link database
 	 * The ajax call to this node must post the node_id of the modem config node
@@ -119,19 +119,20 @@ function onNodeClose(node: PLMConfigNode){
 }
 
 /* Server functions */
-async function getInsteonPorts(req: any, res: any){
+async function getInsteonPorts(req: Request, res: Response){
 	res.json(await PLM.getPlmDevices());
 }
-async function getInsteonLinks(RED: Red, req: any, res: any){
-	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
-	let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId, res);
+async function getInsteonLinks(RED: Red, req: Request, res: Response){
 
-	/* Send the links back to the client */
-	res.json({
-		links: PLMConfigNode?.plm?.links ?? []
-	});
+	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
+	let PLMConfigNode = validatePLMConnection(RED, req.query.id, res);
+
+	if(PLMConfigNode != null){
+		/* Send the links back to the client */
+		res.json(PLMConfigNode?.plm?.links ?? []);
+	}
 }
-async function manageDevice(RED: Red, req: any, res: any){
+async function manageDevice(RED: Red, req: Request, res: Response){
 	let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId, res);
 	let message = "";
 
@@ -202,12 +203,12 @@ function removeOldPLM(node: PLMConfigNode){
 /* Function that takes a node.id and returns the node if it is valid
  * The node must be a PLMConfig node, and the PLM must be connected
  */
-function validatePLMConnection(RED: Red, configNodeId: string, res: any){
+function validatePLMConnection(RED: Red, configNodeId: string, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	let PLMConfigNode = RED.nodes.getNode(configNodeId) as PLMConfigNode;
 
 	/* Validate that the nodeId received is referencing a PLMConfig node */
-	if(PLMConfigNode.type !== 'PLMConfig'){
+	if(PLMConfigNode == null || PLMConfigNode.type !== 'PLMConfig' ){
 		res.json({
 			error: true,
 			message: "Invalid config node specified."
