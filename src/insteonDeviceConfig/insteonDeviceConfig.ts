@@ -32,9 +32,6 @@ export = function(RED: Red) {
 		// Converting config into address
 		this.address = [parseInt(config.address1, 16), parseInt(config.address2, 16), parseInt(config.address3, 16)] as Byte[];
 
-		// Updating status incase of failure
-		// this.status({ text: 'No modem', fill: 'red', shape: 'dot' });
-
 		// Checking if we don't have a modem
 		if(!config.modem){
 			this.emit('Ready');
@@ -47,29 +44,13 @@ export = function(RED: Red) {
 		// Setting up rest of device
 		setupDevice(this);
 
-		// /* Send a product data request message to the device to find out what it is */
-		// getDeviceInfo(node.PLMConfigNode.plm).then(res,err){
-		// 	console.log("res:",res);
-		// };
-
-		// let deviceInfo = await node.PLMConfigNode.plm.sendStandardCommand(node.address,0x00,0x03,0x00);
-		// console.log(deviceInfo);
-		// deviceTypes.filter()
-
-		/* subscribe to packets addressed from the device */
-		// node.PLMConfigNode.plm.on(["**",node.stringAddress], function(packet){
-		// 	node.warn(`got packet from ${node.stringAddress}`);
-		// 	node.warn(packet);
-		// });
+		// Listeners
 	});
 };
 
 //#region Connection Functions
 
 async function setupDevice(node: InsteonDeviceConfigNode){
-
-	// Updating status incase of failure
-	// node.status({ text: 'No modem config', fill: 'red', shape: 'dot' });
 
 	// Can't get the device if we don't have a modem
 	if(!node.PLMConfigNode || !node.PLMConfigNode.plm){
@@ -80,19 +61,13 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 
 	// If not connected yet, wait for connection
 	if(!node.PLMConfigNode.plm.connected){
-		node.PLMConfigNode.plm.once('connected', _ => setupDevice(node));
+		node.PLMConfigNode.plm.once('ready', _ => setupDevice(node));
 		return;
 	}
 
 
 	// Instanciate the device for use
-	node.device = new InsteonDevice(node.address, node.PLMConfigNode.plm, { debug: false, syncInfo: true, syncLinks: false })
-	// node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: true, syncLinks: false });
-
-	node.log('Got device');
-
-	// Updating status incase of failure
-	// node.status({ text: 'No device instance', fill: 'red', shape: 'dot' });
+	node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: true, syncLinks: false });
 
 	// Checking we have a device
 	if(!node.device){
@@ -101,7 +76,11 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 		return;
 	}
 
+	// Listeners
+	node.on('close', () => onNodeClose(node));
+
 	// Emitting all messages
+
 	node.device.on('**', d => node.emit(d));
 
 	node.device.on(['packet', '**'], p => onPacket(node, p));
@@ -111,9 +90,6 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 		node.log('Ready');
 		node.emit('ready', 'Listening')
 	});
-
-	// Updating status
-	// node.status({ text: 'Working', fill: 'green', shape: 'dot' });
 }
 
 //#endregion
@@ -123,6 +99,11 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 function onPacket(node: InsteonDeviceConfigNode, packet: Packet.Packet){
 	node.log('Packet');
 	node.emit('packet', packet);
+}
+
+function onNodeClose(node: InsteonDeviceConfigNode){
+	/* Closing Device */
+	node.log('Closing device');
 }
 
 //#endregion

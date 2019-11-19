@@ -14,7 +14,6 @@ interface SubscribeConfigNodeProps extends NodeProperties {
 	subtype: string;
 }
 
-
 /* Exporting Node Function */
 export = function(RED: Red){
 	/* Fired on every deploy */
@@ -45,30 +44,17 @@ export = function(RED: Red){
 		/* Setting up PLM events */
 		this.deviceConfigNode.on('packet', p => onPacket(this, p));
 		this.deviceConfigNode.on('ready', p => onReady(this, p));
-
-		/* Retrieve the device config node */
-		// node.deviceConfigNode = RED.nodes.getNode(config.device) as InsteonDeviceConfigNode;
-
-		/* Retrieve the PLM config node */
-		// node.PLMConfigNode = node.deviceConfigNode?.PLMConfigNode;
-
-		// node.PLMConfigNode?.on('ready', text => {
-		// 	node.status({ text, fill: 'green', shape: 'dot' });
-		// });
-
-		// node.PLMConfigNode?.on('ready', text => {
-		// 	node.status({ text, fill: 'green', shape: 'dot' });
-		// });
-
 	});
 };
 
-function onReady(node: SubscribeNode, packet: Packet.Packet){
+//#region Event Functions
+
+function onReady(node: SubscribeNode, text: string){
 	node.log('Ready');
 
-	node.status({ fill: 'green', shape: 'dot', text: 'Ready' });
+	node.status({ fill: 'green', shape: 'dot', text });
 
-	node.send({topic: 'ready', payload: packet});
+	node.send({topic: 'ready', payload: text});
 }
 
 function onPacket(node: SubscribeNode, packet: Packet.Packet){
@@ -77,3 +63,4 @@ function onPacket(node: SubscribeNode, packet: Packet.Packet){
 	node.send({topic: 'packet', payload: packet});
 }
 
+//#endregion
