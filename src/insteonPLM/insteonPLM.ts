@@ -12,10 +12,13 @@ export = function(RED: Red){
 	/* Registering node type and a constructor*/
 	RED.nodes.registerType('Insteon-PLM', function(this: ModemNode, props: insteonPLMProps){
 
-		/* Creating actual node */
+		// Creating actual node
 		RED.nodes.createNode(this, props);
 
-		/* Checking if we don't have a modem */
+		// Clearing Status
+		this.status({});
+
+		// Checking if we don't have a modem
 		if(!props.modem){
 			/* Updating status */
 			this.status({fill: 'red', shape: 'dot', text: 'No Modem Connected'});
@@ -24,21 +27,21 @@ export = function(RED: Red){
 			return;
 		}
 
-		/* Retrieve the config node */
+		// Retrieve the config node
 		this.PLMConfigNode = RED.nodes.getNode(props.modem) as InsteonModemConfigNode;
 
-		/* Setting up PLM events */
+		// Setting up PLM events
 		this.PLMConfigNode.on('connected', ()=> onConnected(this));
 		this.PLMConfigNode.on('disconnected', ()=> onDisconnected(this));
 		this.PLMConfigNode.on('error', e => onError(this, e));
 		this.PLMConfigNode.on('packet', p => onPacket(this, p));
 
-		/* Setting inital status */
+		// Setting inital status
 		(this.PLMConfigNode.plm && this.PLMConfigNode.plm.connected)
 			? this.status({fill: 'green', shape: 'dot', text: 'Connected'})
 			: this.status({fill: 'red', shape: 'dot', text: 'Disconnected'});
 
-		/* On input */
+		// On input pass the messag
 		this.on('input', (msg) => onInput(msg, this));
 
 	});

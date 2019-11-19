@@ -14,10 +14,10 @@ let reconnectTime = 15000;
 
 /* Exporting Node Function */
 export = function(RED: Red){
-	/* Settings */
-	reconnectTime = RED.settings.serialReconnectTime || 15000;
+	// Settings
+	reconnectTime = RED.settings.serialReconnectTime ?? reconnectTime;
 
-	/* Registering node type and a constructor*/
+	// Registering node type and a constructor
 	RED.nodes.registerType('insteon-modem-config', function(this: InsteonModemConfigNode, props: PLMConfigNodeProps){
 
 		/* Creating actual node */
@@ -27,15 +27,11 @@ export = function(RED: Red){
 		this.path = props.path;
 		this.errored = false;
 
-		/* Setting up connected getter */
-		Object.defineProperty(this, 'connected', { get: () => this.plm? this.plm.connected : false });
-
 		/* Setting up PLM */
 		setupPLM(this);
-
 	});
 
-	/* Setting up server to get serial nodes */
+	// Setting up server to get serial nodes
 	RED.httpAdmin.get(
 		"/insteon-ports",                          // URL
 		RED.auth.needsPermission('serial.read'),   // Permission
@@ -61,7 +57,8 @@ export = function(RED: Red){
 	);
 };
 
-/* Connection Function */
+//#region Connection Functions
+
 function setupPLM(node: InsteonModemConfigNode){
 
 	/* Removing old PLM */
@@ -78,7 +75,10 @@ function setupPLM(node: InsteonModemConfigNode){
 	node.plm.on('packet', (packet: Packet.Packet) => onPacket(node, packet));
 }
 
-/* Event Functions */
+//#endregion
+
+//#region Event Functions
+
 function onConnected(node: InsteonModemConfigNode){
 	node.log('Connected');
 
@@ -118,42 +118,50 @@ function onNodeClose(node: InsteonModemConfigNode){
 	removeOldPLM(node);
 }
 
-/* Server functions */
+//#endregion
+
+//#region Server Functions
+
 async function getInsteonPorts(req: Request, res: Response){
-	res.json(await PLM.getPlmDevices());
+
+	try{
+		const devices = await PLM.getPlmDevices();
+
+		res.json(devices);
+	}
+	catch(e){
+		res.status(500).send({message: 'An error has occured', caught: e});
+	}
+
 }
 async function getInsteonLinks(RED: Red, req: Request, res: Response){
 
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
-	let PLMConfigNode = validatePLMConnection(RED, req.query.id, res);
+	try{
+		let PLMConfigNode = validatePLMConnection(RED, req.query.id);
 
-	if(PLMConfigNode){
 		/* Send the links back to the client */
 		res.json(PLMConfigNode?.plm?.links ?? []);
 	}
+	catch(e){
+		res.status(500).send({message: 'An error has occured', caught: e});
+	}
 }
 async function manageDevice(RED: Red, req: Request, res: Response){
-	let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId, res);
-
-	if(!PLMConfigNode)
-		return;
-
-	/* Validate the device address */
-	let address = Utilities.toAddressArray(req.body.address) as Byte[];
-	if(address.length !== 3){
-		// Server side failure
-		res.status(400);
-		res.json({
-			message: "Invalid Insteon device address. Please use format `AA.BB.CC`"
-		});
-		return;
-	}
 
 	try{
-		/* Something strange is happening here -
-			queryDeviceInfo only works sometimes, othertimes it hangs indefinitely
-			unmanageDevice doesn't seem to have any effect on the link database
-		*/
+		let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId);
+
+		/* Validate the device address */
+		let address = Utilities.toAddressArray(req.body.address) as Byte[];
+		if(address.length !== 3){
+			// Server side failure
+			res.status(400);
+			res.json({
+				message: "Invalid Insteon device address. Please use format `AA.BB.CC`"
+			});
+			return;
+		}
 
 		let result: any;
 		let messageVerb = "";
@@ -180,19 +188,17 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 			// message: `Device ${deviceInfo.description} was ${messageVerb}`
 			message: `Device was ${messageVerb}`
 		});
-	} catch(e){
-		// Server side failure
-		res.status(500);
 
-		res.json({
-			message: "Failed to update links",
-			caught: e
-		});
-		return;
+	}
+	catch(e){
+		res.status(500).send({message: 'An error has occured', caught: e});
 	}
 }
 
-/* Clean up functions */
+//#endregion
+
+//#region Clean up functions
+
 function removeOldPLM(node: InsteonModemConfigNode){
 	// Removing all listeners
 	node.plm?.removeAllListeners();
@@ -205,37 +211,28 @@ function removeOldPLM(node: InsteonModemConfigNode){
 	delete node.plm;
 }
 
+//#endregion
+
+//#region Utlity Functions
+
 /* Function that takes a node.id and returns the node if it is valid
  * The node must be a PLMConfig node, and the PLM must be connected
  */
-function validatePLMConnection(RED: Red, configNodeId: string, res: Response){
+function validatePLMConnection(RED: Red, configNodeId: string){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	let PLMConfigNode = RED.nodes.getNode(configNodeId) as InsteonModemConfigNode;
 
 	/* Validate that the nodeId received is referencing a PLMConfig node */
-	if(PLMConfigNode == null || PLMConfigNode.type !== 'insteon-modem-config' ){
-		// Setting status to server side error
-		res.status(500);
-
-		// Sending error message
-		res.json({ message: "Invalid config node specified." });
-
-		//
-		return false;
-	}
+	if(PLMConfigNode == null || PLMConfigNode.type !== 'insteon-modem-config' )
+		throw Error("Invalid config node specified.");
 
 	/* Check to see if the Config Node is connected to the PLM. If the node hasn't been deployed yet, it won't be connected
 	 * The best thing would be to connect, get/return the links then disconnect, but for now we will just send an error
 	 */
-	if(PLMConfigNode.plm === null || !PLMConfigNode.plm?.connected){
-		// Setting status to server side error
-		res.status(500);
-
-		// Sending error message
-		res.json({ message: "The PLM is not connected. Cannot load links." });
-
-		return false;
-	}
+	if(PLMConfigNode.plm === null || !PLMConfigNode.plm?.connected)
+		throw Error("The PLM is not connected. Cannot load links.");
 
 	return PLMConfigNode;
 }
+
+//#endregion

@@ -18,7 +18,6 @@
 			var node = this;
 			// Select the value in the subtype drop down
 			$(`#node-input-subtype option[value="${node.subtype}"]`).attr('selected', 'selected');
-			console.log("subtype:",node.subtype);
 
 			// Check the boxes for the events that have been selected
 			node.selectedEvents.map(el => $(`#${el.id}`).prop('checked',true));

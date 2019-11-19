@@ -13,7 +13,7 @@
 		icon: 'bridge-dash.png',
 		label: function() {
 			var modemNode = RED.nodes.node(this.modem);
-			let modemLabel = modemNode !== null ? modemNode.label : 'Insteon PLM';
+			let modemLabel = modemNode !== null ? modemNode.label() : 'Insteon PLM';
 
 			return this.name || modemLabel;
 		}

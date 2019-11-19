@@ -15,10 +15,13 @@ interface ModemNode extends Node {
 }
 
 interface SubscribeNode extends Node {
+	deviceConfigNode?: InsteonDeviceConfigNode;
+	PLMConfigNode?: InsteonModemConfigNode;
+
 }
 
 interface InsteonDeviceConfigNode extends Node {
 	address: Byte[];
-	PLMConfigNode: InsteonModemConfigNode;
-	device: InsteonDevice;
+	PLMConfigNode?: InsteonModemConfigNode;
+	device?: InsteonDevice;
 }
