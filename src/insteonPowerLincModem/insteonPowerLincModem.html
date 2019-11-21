@@ -1,11 +1,14 @@
 <!-- Node Registration -->
 <script type="text/javascript">
-	RED.nodes.registerType('Insteon-PLM',{
+
+	//#region Type Registration
+
+	RED.nodes.registerType('insteon-powerlinc-modem',{
 		category: 'Insteon',
 		color: '#2e88c5',
 		align: 'right',
 		defaults: {
-			modem: { value:'', type:'insteon-modem-config' },
+			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' }
 		},
 		inputs:1,
@@ -13,15 +16,17 @@
 		icon: 'bridge-dash.png',
 		label: function() {
 			var modemNode = RED.nodes.node(this.modem);
-			let modemLabel = modemNode !== null ? modemNode.label() : 'Insteon PLM';
 
-			return this.name || modemLabel;
-		}
+			return this.name || modemNode !== null ? modemNode.label() : 'PowerLinc Modem';
+		},
+		paletteLabel: 'PowerLinc Modem'
 	});
+
+	//#endregion
 </script>
 
 <!-- Node Configuration -->
-<script type="text/x-red" data-template-name="Insteon-PLM">
+<script type="text/x-red" data-template-name="insteon-powerlinc-modem">
 	<div class="form-row">
 		<label for="node-input-modem">Insteon Modem</label>
 		<input type="text" id="node-input-modem" placeholder="/dev/usb123">
@@ -33,7 +38,7 @@
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="Insteon-PLM">
+<script type="text/x-red" data-help-name="insteon-powerlinc-modem">
 	<h3>Info</h3>
 	Reads and writes data to an Insteon PowerLinc Modem.
 	<br/><br/>

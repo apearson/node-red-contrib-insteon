@@ -3,21 +3,12 @@ import { Node } from 'node-red';
 import PLM, { InsteonDevice } from 'insteon-plm';
 import { Byte } from 'insteon-packet-parser';
 
-/* Types */
+//#region Config Nodes
+
 interface InsteonModemConfigNode extends Node {
 	path: string;
 	errored: boolean;
 	plm?: PLM;
-}
-
-interface ModemNode extends Node {
-	PLMConfigNode: InsteonModemConfigNode;
-}
-
-interface SubscribeNode extends Node {
-	deviceConfigNode?: InsteonDeviceConfigNode;
-	PLMConfigNode?: InsteonModemConfigNode;
-
 }
 
 interface InsteonDeviceConfigNode extends Node {
@@ -25,3 +16,21 @@ interface InsteonDeviceConfigNode extends Node {
 	PLMConfigNode?: InsteonModemConfigNode;
 	device?: InsteonDevice;
 }
+
+//#endregion
+
+//#region Flow Nodes
+
+interface ModemNode extends Node {
+	PLMConfigNode: InsteonModemConfigNode;
+}
+
+interface SubscribeNode extends Node {
+	deviceConfigNode?: InsteonDeviceConfigNode;
+}
+
+interface CommandNode extends Node {
+	deviceConfigNode?: InsteonDeviceConfigNode;
+}
+
+//#endregion

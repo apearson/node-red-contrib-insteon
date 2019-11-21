@@ -10,7 +10,7 @@ interface insteonPLMProps extends NodeProperties{
 /* Exporting Node Function */
 export = function(RED: Red){
 	/* Registering node type and a constructor*/
-	RED.nodes.registerType('Insteon-PLM', function(this: ModemNode, props: insteonPLMProps){
+	RED.nodes.registerType('insteon-powerlinc-modem', function(this: ModemNode, props: insteonPLMProps){
 
 		// Creating actual node
 		RED.nodes.createNode(this, props);

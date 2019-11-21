@@ -34,7 +34,7 @@ export = function(RED: Red) {
 
 		// Checking if we don't have a modem
 		if(!config.modem){
-			this.emit('Ready');
+			this.emit('status', 'No modem');
 			return;
 		}
 
@@ -54,7 +54,7 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 
 	// Can't get the device if we don't have a modem
 	if(!node.PLMConfigNode || !node.PLMConfigNode.plm){
-		node.emit('ready', 'No Modem Config');
+		node.emit('status', 'No Modem Config');
 		node.log('No modem config');
 		return;
 	}
@@ -71,7 +71,7 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 
 	// Checking we have a device
 	if(!node.device){
-		node.emit('ready', 'No Device Instance');
+		node.emit('status', 'No Device Instance');
 		node.log('No device instance');
 		return;
 	}

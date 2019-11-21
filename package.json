@@ -20,8 +20,9 @@
 		"nodes": {
 			"insteonModemConfig": "./dist/insteonModemConfig/insteonModemConfig.js",
 			"insteonDeviceConfig": "./dist/insteonDeviceConfig/insteonDeviceConfig.js",
-			"insteon-PLM": "./dist/insteonPLM/insteonPLM.js",
-			"insteonSubscribe": "./dist/insteonSubscribe/insteonSubscribe.js"
+			"insteonDeviceSubscribe": "./dist/insteonDeviceSubscribe/insteonDeviceSubscribe.js",
+			"insteonDeviceCommand": "./dist/insteonDeviceCommand/insteonDeviceCommand.js",
+			"insteonPowerLincModem": "./dist/insteonPowerLincModem/insteonPowerLincModem.js"
 		}
 	},
 	"files": [
