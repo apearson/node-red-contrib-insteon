@@ -18,11 +18,16 @@
 	},
 	"node-red": {
 		"nodes": {
-			"insteonModemConfig": "./dist/insteonModemConfig/insteonModemConfig.js",
-			"insteonDeviceConfig": "./dist/insteonDeviceConfig/insteonDeviceConfig.js",
-			"insteonDeviceSubscribe": "./dist/insteonDeviceSubscribe/insteonDeviceSubscribe.js",
-			"insteonDeviceCommand": "./dist/insteonDeviceCommand/insteonDeviceCommand.js",
-			"insteonPowerLincModem": "./dist/insteonPowerLincModem/insteonPowerLincModem.js"
+			"insteonModemConfig": "./dist/modem/insteonModemConfig/insteonModemConfig.js",
+			"insteonPowerLincModem": "./dist/modem/insteonPowerLincModem/insteonPowerLincModem.js",
+
+			"insteonDeviceConfig": "./dist/device/insteonDeviceConfig/insteonDeviceConfig.js",
+			"insteonDeviceSubscribe": "./dist/device/insteonDeviceSubscribe/insteonDeviceSubscribe.js",
+			"insteonDeviceCommand": "./dist/device/insteonDeviceCommand/insteonDeviceCommand.js",
+
+			"insteonSceneConfig": "./dist/scene/insteonSceneConfig/insteonSceneConfig.js",
+			"insteonSceneSubscribe": "./dist/scene/insteonSceneSubscribe/insteonSceneSubscribe.js",
+			"insteonSceneCommand": "./dist/scene/insteonSceneCommand/insteonSceneCommand.js"
 		}
 	},
 	"files": [

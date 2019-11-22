@@ -1,6 +1,6 @@
 import { Red, NodeProperties } from 'node-red';
 import { Packet } from 'insteon-plm';
-import { InsteonDeviceConfigNode, CommandNode } from '../types/types';
+import { DeviceSubscribeNode, InsteonDeviceConfigNode } from '../../types/types';
 
 
 interface SubscribeConfigNodeProps extends NodeProperties {
@@ -11,8 +11,9 @@ interface SubscribeConfigNodeProps extends NodeProperties {
 
 /* Exporting Node Function */
 export = function(RED: Red){
+	/* Fired on every deploy */
 	/* Registering node type and a constructor */
-	RED.nodes.registerType('insteon-device-command', function(this: CommandNode, props: SubscribeConfigNodeProps){
+	RED.nodes.registerType('insteon-device-subscribe', function(this: DeviceSubscribeNode, props: SubscribeConfigNodeProps){
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
 
@@ -42,14 +43,14 @@ export = function(RED: Red){
 
 //#region Event Functions
 
-function onStatus(node: CommandNode, text: string){
+function onStatus(node: DeviceSubscribeNode, text: string){
 
 	node.status({ fill: "blue", shape: 'dot', text });
 
 	node.send({topic: 'ready', payload: text});
 }
 
-function onReady(node: CommandNode, text: string){
+function onReady(node: DeviceSubscribeNode, text: string){
 	node.log('Ready');
 
 	node.status({ fill: 'green', shape: 'dot', text });
@@ -57,7 +58,7 @@ function onReady(node: CommandNode, text: string){
 	node.send({topic: 'ready', payload: text});
 }
 
-function onPacket(node: CommandNode, packet: Packet.Packet){
+function onPacket(node: DeviceSubscribeNode, packet: Packet.Packet){
 	node.log('Got packet');
 
 	node.send({topic: 'packet', payload: packet});

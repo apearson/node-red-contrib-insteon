@@ -10,7 +10,7 @@
 
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../types/types';
+import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../types/types';
 import { Byte, Packet, InsteonDevice } from 'insteon-plm';
 
 /* Interfaces */
@@ -86,7 +86,7 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 	node.device.on(['packet', '**'], p => onPacket(node, p));
 
 	// Emitting on ready
-	node.device.on('ready', _ => {
+	node.device.once('ready', _ => {
 		node.log('Ready');
 		node.emit('ready', 'Listening')
 	});

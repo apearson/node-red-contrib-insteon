@@ -17,6 +17,11 @@ interface InsteonDeviceConfigNode extends Node {
 	device?: InsteonDevice;
 }
 
+interface InsteonSceneConfigNode extends Node {
+	scene?: number;
+	PLMConfigNode?: InsteonModemConfigNode;
+}
+
 //#endregion
 
 //#region Flow Nodes
@@ -25,12 +30,20 @@ interface ModemNode extends Node {
 	PLMConfigNode: InsteonModemConfigNode;
 }
 
-interface SubscribeNode extends Node {
+interface DeviceSubscribeNode extends Node {
 	deviceConfigNode?: InsteonDeviceConfigNode;
 }
 
-interface CommandNode extends Node {
+interface DeviceCommandNode extends Node {
 	deviceConfigNode?: InsteonDeviceConfigNode;
+}
+
+interface SceneSubscribeNode extends Node {
+	sceneConfigNode?: InsteonSceneConfigNode;
+}
+
+interface SceneCommandNode extends Node {
+	sceneConfigNode?: InsteonSceneConfigNode;
 }
 
 //#endregion

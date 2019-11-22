@@ -1,7 +1,7 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
 import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
-import { InsteonModemConfigNode } from '../types/types';
+import { InsteonModemConfigNode } from '../../types/types';
 import { Request, Response } from 'express';
 
 /* Interfaces */
