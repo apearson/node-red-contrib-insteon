@@ -43,8 +43,6 @@ export = function(RED: Red) {
 
 		// Setting up rest of device
 		setupDevice(this);
-
-		// Listeners
 	});
 };
 
@@ -65,7 +63,6 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 		return;
 	}
 
-
 	// Instanciate the device for use
 	node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: true, syncLinks: false });
 
@@ -79,12 +76,6 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 	// Listeners
 	node.on('close', () => onNodeClose(node));
 
-	// Emitting all messages
-
-	node.device.on('**', d => node.emit(d));
-
-	node.device.on(['packet', '**'], p => onPacket(node, p));
-
 	// Emitting on ready
 	node.device.once('ready', _ => {
 		node.log('Ready');
@@ -95,11 +86,6 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 //#endregion
 
 //#region Event Functions
-
-function onPacket(node: InsteonDeviceConfigNode, packet: Packet.Packet){
-	node.log('Packet');
-	node.emit('packet', packet);
-}
 
 function onNodeClose(node: InsteonDeviceConfigNode){
 	/* Closing Device */

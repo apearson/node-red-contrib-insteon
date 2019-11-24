@@ -35,33 +35,41 @@ export = function(RED: Red){
 		this.deviceConfigNode = RED.nodes.getNode(props.device) as InsteonDeviceConfigNode;
 
 		/* Setting up PLM events */
-		this.deviceConfigNode.on('packet', p => onPacket(this, p));
-		this.deviceConfigNode.on('status', p => onStatus(this, p));
 		this.deviceConfigNode.on('ready', p => onReady(this, p));
 	});
 };
 
 //#region Event Functions
 
-function onStatus(node: DeviceSubscribeNode, text: string){
-
-	node.status({ fill: "blue", shape: 'dot', text });
-
-	node.send({topic: 'ready', payload: text});
-}
-
 function onReady(node: DeviceSubscribeNode, text: string){
-	node.log('Ready');
+	node.log(`Ready`);
 
 	node.status({ fill: 'green', shape: 'dot', text });
 
 	node.send({topic: 'ready', payload: text});
+
+	// Adding event listeners
+	node.deviceConfigNode?.device?.on(['packet', '**'], function (this: any, p){ onPacket(node, this.event, p) });
+	node.deviceConfigNode?.device?.on(['switch', '**'], function (this: any, p){ onSwitch(node, this.event, p) });
+	node.deviceConfigNode?.device?.on(['dim', '**' ], function (this: any, p){ onSwitch(node, this.event, p) });
 }
 
-function onPacket(node: DeviceSubscribeNode, packet: Packet.Packet){
+function onPacket(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
 	node.log('Got packet');
 
 	node.send({topic: 'packet', payload: packet});
+}
+
+function onSwitch(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
+	node.send({
+		topic: event[0],
+		payload: {
+			status: event[1],
+			type: event[2],
+		},
+		event,
+		packet,
+	});
 }
 
 //#endregion
