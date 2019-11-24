@@ -2,7 +2,6 @@ import { Red, NodeProperties } from 'node-red';
 import { Packet } from 'insteon-plm';
 import { InsteonDeviceConfigNode, DeviceCommandNode } from '../../types/types';
 
-
 interface DeviceSubscribeConfigNodeProps extends NodeProperties {
 	device: string;
 	selectedEvents: string[];
@@ -34,33 +33,16 @@ export = function(RED: Red){
 		this.deviceConfigNode = RED.nodes.getNode(props.device) as InsteonDeviceConfigNode;
 
 		/* Setting up PLM events */
-		this.deviceConfigNode.on('packet', p => onPacket(this, p));
-		this.deviceConfigNode.on('status', p => onStatus(this, p));
 		this.deviceConfigNode.on('ready', p => onReady(this, p));
 	});
 };
 
 //#region Event Functions
 
-function onStatus(node: DeviceCommandNode, text: string){
-
-	node.status({ fill: "blue", shape: 'dot', text });
-
-	node.send({topic: 'ready', payload: text});
-}
-
 function onReady(node: DeviceCommandNode, text: string){
 	node.log('Ready');
 
 	node.status({ fill: 'green', shape: 'dot', text });
-
-	node.send({topic: 'ready', payload: text});
-}
-
-function onPacket(node: DeviceCommandNode, packet: Packet.Packet){
-	node.log('Got packet');
-
-	node.send({topic: 'packet', payload: packet});
 }
 
 //#endregion

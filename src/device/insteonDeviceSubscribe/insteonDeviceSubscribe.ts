@@ -61,6 +61,7 @@ function onPacket(node: DeviceSubscribeNode, event: string[], packet: Packet.Pac
 }
 
 function onSwitch(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
+
 	node.send({
 		topic: event[0],
 		payload: {
