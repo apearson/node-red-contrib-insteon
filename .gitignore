@@ -5,7 +5,7 @@ node_modules
 dist
 
 # Test
-.update.sh
+update.sh
 
 # VSCode
 *.code-workspace
