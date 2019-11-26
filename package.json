@@ -1,6 +1,6 @@
 {
 	"name": "node-red-contrib-insteon",
-	"version": "0.5.2",
+	"version": "0.5.3",
 	"description": "A library of Node-RED nodes for interacting with the Insteon home automation ecosystem",
 	"license": "MIT",
 	"keywords": [
@@ -18,10 +18,16 @@
 	},
 	"node-red": {
 		"nodes": {
-			"PLMConfig": "./dist/PLMConfig/PLMConfig.js",
-			"insteon-PLM": "./dist/insteonPLM/insteonPLM.js",
-			"insteonDeviceConfig": "./dist/insteonDeviceConfig/insteonDeviceConfig.js",
-			"insteonSubscribe": "./dist/insteonSubscribe/insteonSubscribe.js"
+			"insteonModemConfig": "./dist/modem/insteonModemConfig/insteonModemConfig.js",
+			"insteonPowerLincModem": "./dist/modem/insteonPowerLincModem/insteonPowerLincModem.js",
+
+			"insteonDeviceConfig": "./dist/device/insteonDeviceConfig/insteonDeviceConfig.js",
+			"insteonDeviceSubscribe": "./dist/device/insteonDeviceSubscribe/insteonDeviceSubscribe.js",
+			"insteonDeviceCommand": "./dist/device/insteonDeviceCommand/insteonDeviceCommand.js",
+
+			"insteonSceneConfig": "./dist/scene/insteonSceneConfig/insteonSceneConfig.js",
+			"insteonSceneSubscribe": "./dist/scene/insteonSceneSubscribe/insteonSceneSubscribe.js",
+			"insteonSceneCommand": "./dist/scene/insteonSceneCommand/insteonSceneCommand.js"
 		}
 	},
 	"files": [
@@ -31,11 +37,12 @@
 		"@types/node-red": "^0.20.0",
 		"@types/serialport": "^7.0.4",
 		"copyfiles": "^2.1.1",
-		"ts-node": "^8.3.0",
-		"typescript": "^3.5.3",
+		"ts-node": "^8.5.2",
+		"typescript": "^3.7.2",
 		"watch": "^1.0.2"
 	},
 	"dependencies": {
-		"insteon-plm": "^0.3.2"
+		"@types/express": "^4.17.2",
+		"insteon-plm": "^0.3.7"
 	}
 }

@@ -1,51 +1,70 @@
 <!-- Node Registration -->
 <script type="text/javascript">
-	RED.nodes.registerType('subscribe',{
+
+	//#region Event Methods
+
+	function onInputCheck(n){
+		if($(this).prop("checked")) {
+				node.selectedEvents.push({
+					id: $(this).prop('id'),
+					label: $("label[for='" + $(this).attr('id') + "']").text(),
+					cmd1: $(this).attr('data-cmd1'),
+					cmd2: $(this).attr('data-cmd2')
+				});
+			}
+	}
+
+	//#endregion
+
+	//#region Lifecycle Methods
+
+	function onEditPrepare(){
+		// This: the current node
+
+			// Select the value in the subtype drop down
+			$(`#node-input-subtype option[value="${this.subtype}"]`).attr('selected', 'selected');
+
+			// Check the boxes for the events that have been selected
+			this.selectedEvents.map(el => $(`#${el.id}`).prop('checked',true));
+	}
+
+	function onEditSave(){
+			// This: the current node
+			this.selectedEvents = [];
+
+		// reach which events were selected and push them into the config
+		$(".event-selection input").each(onInputCheck);
+	}
+
+	//#endregion
+
+	//#region Type Registration
+
+	RED.nodes.registerType('insteon-device-subscribe',{
 		category: 'Insteon',
 		color: '#2e88c5',
 		align: 'left',
 		defaults: {
-			device: { value:'', type:'insteon-device-config' },
+			device: { value: '', type: 'insteon-device-config' },
 			name: { value: '' },
 			subtype: {value: ''},
-			selectedEvents: {value:null}
+			selectedEvents: { value: null }
 		},
-		inputs:0,
-		outputs:1,
-		icon: 'arrow.png',
-		label: function() {
-			return this.name || 'subscribe';
-		},
-		oneditprepare: function(){
-			var node = this;
-			// Select the value in the subtype drop down
-			$(`#node-input-subtype option[value="${node.subtype}"]`).attr('selected', 'selected');
-			console.log("subtype:",node.subtype);
-
-			// Check the boxes for the events that have been selected
-			node.selectedEvents.map(el => $(`#${el.id}`).prop('checked',true));
-		},
-	    oneditsave: function() {
-	        var node = this;
-	        node.selectedEvents = [];
-			// reach which events were selected and push them into the config
-	        $(".event-selection input").each(function(n) {
-	            if ($(this).prop("checked")) {
-	                node.selectedEvents.push({
-	                	id: $(this).prop('id'),
-						label: $("label[for='" + $(this).attr('id') + "']").text(),
-						cmd1: $(this).attr('data-cmd1'),
-						cmd2: $(this).attr('data-cmd2')
-	                });
-	            }
-	        });
-	    }
+		inputs: 0,
+		outputs: 1,
+		icon: 'bridge.png',
+		label: function(){ return this.name || 'Device In' },
+		paletteLabel: 'Device In',
+		oneditprepare: onEditPrepare,
+		oneditsave: onEditSave
 	});
-	
+
+	//#endregion
+
 </script>
 
 <!-- Node Configuration -->
-<script type="text/x-red" data-template-name="subscribe">
+<script type="text/x-red" data-template-name="insteon-device-subscribe">
 	<div class="form-row">
 		<label for="node-input-device">Insteon Device</label>
 		<input type="text" id="node-input-device" placeholder="xyz">
@@ -90,9 +109,9 @@
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="subscribe">
+<script type="text/x-red" data-help-name="insteon-device-subscribe">
 	<h3>Info</h3>
 	<p>Subscribe to event changes for an insteon device.</p>
-	
+
 	<p>Use this node to start a flow when a switch is turned on, motion is detected, etc.</p>
 </script>

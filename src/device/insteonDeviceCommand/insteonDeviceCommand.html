@@ -1,0 +1,41 @@
+<!-- Node Registration -->
+<script type="text/javascript">
+
+	//#region Type Registration
+
+	RED.nodes.registerType('insteon-device-command',{
+		category: 'Insteon',
+		color: '#2e88c5',
+		align: 'right',
+		defaults: {
+			device: { value:'', type:'insteon-device-config' },
+			name: { value: '' },
+		},
+		inputs: 1,
+		outputs: 0,
+		icon: 'bridge.png',
+		label: function(){ return this.name || 'Device Out' },
+		paletteLabel: 'Device Out',
+	});
+
+	//#endregion
+
+</script>
+
+<!-- Node Configuration -->
+<script type="text/x-red" data-template-name="insteon-device-command">
+	<div class="form-row">
+		<label for="node-input-device">Insteon Device</label>
+		<input type="text" id="node-input-device" placeholder="xyz">
+	</div>
+	<div class="form-row">
+		<label for="node-input-name"><i class="icon-tag"></i> Name</label>
+		<input type="text" id="node-input-name" placeholder="Name">
+	</div>
+</script>
+
+<!-- Help Panel -->
+<script type="text/x-red" data-help-name="insteon-device-command">
+	<h3>Info</h3>
+	<p>Send commands to an insteon device.</p>
+</script>

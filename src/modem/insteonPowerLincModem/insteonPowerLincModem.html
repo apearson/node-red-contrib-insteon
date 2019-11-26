@@ -1,11 +1,14 @@
 <!-- Node Registration -->
 <script type="text/javascript">
-	RED.nodes.registerType('Insteon-PLM',{
+
+	//#region Type Registration
+
+	RED.nodes.registerType('insteon-powerlinc-modem',{
 		category: 'Insteon',
 		color: '#2e88c5',
 		align: 'right',
 		defaults: {
-			modem: { value:'', type:'PLMConfig' },
+			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' }
 		},
 		inputs:1,
@@ -13,15 +16,17 @@
 		icon: 'bridge-dash.png',
 		label: function() {
 			var modemNode = RED.nodes.node(this.modem);
-			let modemLabel = modemNode !== null ? modemNode.label() : 'Insteon PLM';
 
-			return this.name || modemLabel;
-		}
+			return this.name || modemNode !== null ? modemNode.label() : 'Modem';
+		},
+		paletteLabel: 'Modem'
 	});
+
+	//#endregion
 </script>
 
 <!-- Node Configuration -->
-<script type="text/x-red" data-template-name="Insteon-PLM">
+<script type="text/x-red" data-template-name="insteon-powerlinc-modem">
 	<div class="form-row">
 		<label for="node-input-modem">Insteon Modem</label>
 		<input type="text" id="node-input-modem" placeholder="/dev/usb123">
@@ -33,11 +38,11 @@
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="Insteon-PLM">
+<script type="text/x-red" data-help-name="insteon-powerlinc-modem">
 	<h3>Info</h3>
-	Reads and writes data to an Insteon PowerLinc Modem.  
+	Reads and writes data to an Insteon PowerLinc Modem.
 	<br/><br/>
-	Control the modem using the topic as the command and the payload as the command data. This node can be used to directly control the modem and/or Insteon devices using different messages. This node outputs a lot of data and it is recommmended that you filter the messages for that messages you want. 
+	Control the modem using the topic as the command and the payload as the command data. This node can be used to directly control the modem and/or Insteon devices using different messages. This node outputs a lot of data and it is recommmended that you filter the messages for that messages you want.
 
 	<h3>Topics</h3>
 	<h4>Info</h4>
@@ -47,16 +52,16 @@
 	syncInfo -  Sync general ifno<br/>
 	syncConfig -  Sync config info<br/>
 	syncLinks -  Sync links<br/>
-	
+
 	<h4>Commands</h4>
 	command -  Send a standard Insteon command<br/>
 	extendedCommand -  Send an extended Insteon command<br/>
 	groupCommand -  Send an Insteon group command<br/>
-	
+
 	<h4>Syncing</h4>
 	addLink -  Add a link to a device<br/>
 	deleteLink -  Delete a link to a device<br/>
-	
+
 	<h4>Linking</h4>
 	startLinking -  Start manual linking<br/>
 	stopLinking -  Stop manual linking<br/>
@@ -66,7 +71,7 @@
 	sleep -  Put modem to sleep<br/>
 	wake -  Wake modem from sleep<br/>
 	close -  Close modem (For removal)<br/>
-	
+
 	<h4>Modem Setup</h4>
 	setConfig -  Update a config setting<br/>
 	setCategory -  Change the modem's Insteon category<br/>

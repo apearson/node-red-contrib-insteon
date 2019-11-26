@@ -1,0 +1,42 @@
+<!-- Node Registration -->
+<script type="text/javascript">
+
+	/** Type Registration **/
+	RED.nodes.registerType('insteon-scene-config',{
+		category: 'config',
+		color: '#2e88c5',
+		align: 'left',
+		defaults: {
+			modem: { value: '', type: 'insteon-modem-config' },
+			scene: { value: '' },
+			name: { value: '' },
+		},
+		inputs: 0,
+		outputs: 0,
+		icon: 'light.png',
+		label: function(){ return this.name || 'Insteon Scene' }
+	});
+
+</script>
+
+<!-- Node Configuration -->
+<script type="text/x-red" data-template-name="insteon-scene-config">
+	<div class="form-row">
+		<label for="node-config-input-modem">Insteon Modem</label>
+		<input type="text" id="node-config-input-modem" placeholder="/dev/usb123">
+  </div>
+  <div class="form-row">
+		<label for="node-config-input-scene">Insteon Scene Number</label>
+		<input type="number" id="node-config-input-scene">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-name"><i class="icon-tag"></i> Name</label>
+		<input type="text" id="node-config-input-name" placeholder="Name">
+  </div>
+</script>
+
+<!-- Help Panel -->
+<script type="text/x-red" data-help-name="insteon-scene-config">
+	<h3>Info</h3>
+	<p>Represents one insteon scene.</p>
+</script>

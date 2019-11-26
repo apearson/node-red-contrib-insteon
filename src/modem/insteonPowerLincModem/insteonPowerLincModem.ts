@@ -1,6 +1,6 @@
 /* Importing types */
 import { Red, NodeProperties } from 'node-red';
-import { PLMNode, PLMConfigNode } from '../types/types';
+import { ModemNode, InsteonModemConfigNode } from '../../types/types';
 import PLM, { Packet } from 'insteon-plm';
 
 interface insteonPLMProps extends NodeProperties{
@@ -10,12 +10,15 @@ interface insteonPLMProps extends NodeProperties{
 /* Exporting Node Function */
 export = function(RED: Red){
 	/* Registering node type and a constructor*/
-	RED.nodes.registerType('Insteon-PLM', function(this: PLMNode, props: insteonPLMProps){
+	RED.nodes.registerType('insteon-powerlinc-modem', function(this: ModemNode, props: insteonPLMProps){
 
-		/* Creating actual node */
+		// Creating actual node
 		RED.nodes.createNode(this, props);
 
-		/* Checking if we don't have a modem */
+		// Clearing Status
+		this.status({});
+
+		// Checking if we don't have a modem
 		if(!props.modem){
 			/* Updating status */
 			this.status({fill: 'red', shape: 'dot', text: 'No Modem Connected'});
@@ -24,47 +27,47 @@ export = function(RED: Red){
 			return;
 		}
 
-		/* Retrieve the config node */
-		this.PLMConfigNode = RED.nodes.getNode(props.modem) as PLMConfigNode;
+		// Retrieve the config node
+		this.PLMConfigNode = RED.nodes.getNode(props.modem) as InsteonModemConfigNode;
 
-		/* Setting up PLM events */
+		// Setting up PLM events
 		this.PLMConfigNode.on('connected', ()=> onConnected(this));
 		this.PLMConfigNode.on('disconnected', ()=> onDisconnected(this));
 		this.PLMConfigNode.on('error', e => onError(this, e));
 		this.PLMConfigNode.on('packet', p => onPacket(this, p));
 
-		/* Setting inital status */
+		// Setting inital status
 		(this.PLMConfigNode.plm && this.PLMConfigNode.plm.connected)
 			? this.status({fill: 'green', shape: 'dot', text: 'Connected'})
 			: this.status({fill: 'red', shape: 'dot', text: 'Disconnected'});
 
-		/* On input */
+		// On input pass the messag
 		this.on('input', (msg) => onInput(msg, this));
 
 	});
 };
 
 /* Connection Function */
-function onConnected(node: PLMNode){
+function onConnected(node: ModemNode){
 	/* Setting connected status */
 	node.status({fill: 'green', shape: 'dot', text: 'Connected'});
 }
-function onDisconnected(node: PLMNode){
+function onDisconnected(node: ModemNode){
 	/* Setting connected status */
 	node.status({fill: 'red', shape: 'dot', text: 'Disconnected'});
 }
-function onError(node: PLMNode, error: Error){
+function onError(node: ModemNode, error: Error){
 	/* If PLM got disconnected, reconnect */
 	if(node.PLMConfigNode.plm && node.PLMConfigNode.plm.connected){
 		node.status({fill: 'red', shape: 'ring', text: 'Errored'});
 	}
 }
-function onPacket(node: PLMNode, packet: Packet.Packet){
+function onPacket(node: ModemNode, packet: Packet.Packet){
 	node.send({topic: 'packet', payload: packet});
 }
 
 /* Node RED Processing */
-async function onInput(msg: any, node: PLMNode){
+async function onInput(msg: any, node: ModemNode){
 	/* Output holder */
 	let msgOut: any = {};
 
@@ -98,7 +101,7 @@ async function onInput(msg: any, node: PLMNode){
 
 			case 'addLink': msgOut = await addLink(msg, plm); break;
 			case 'deleteLink': msgOut = await deleteLink(msg, plm); break;
-			
+
 			case 'startLinking': msgOut = await startLinking(msg, plm); break;
 			case 'stopLinking': msgOut = await stopLinking(msg, plm); break;
 
