@@ -4,5 +4,8 @@ node_modules
 # Build
 dist
 
+# Test
+.update.sh
+
 # VSCode
 *.code-workspace
