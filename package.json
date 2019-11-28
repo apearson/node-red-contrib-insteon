@@ -26,7 +26,6 @@
 			"insteonDeviceCommand": "./dist/device/insteonDeviceCommand/insteonDeviceCommand.js",
 
 			"insteonSceneConfig": "./dist/scene/insteonSceneConfig/insteonSceneConfig.js",
-			"insteonSceneSubscribe": "./dist/scene/insteonSceneSubscribe/insteonSceneSubscribe.js",
 			"insteonSceneCommand": "./dist/scene/insteonSceneCommand/insteonSceneCommand.js"
 		}
 	},

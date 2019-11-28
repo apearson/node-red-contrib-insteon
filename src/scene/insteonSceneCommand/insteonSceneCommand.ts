@@ -82,8 +82,11 @@ async function onInput(msg: any, node: SceneCommandNode){
 
 async function toggle(node: SceneCommandNode, msg: any, plm: PowerLincModem, scene: Byte){
 
+	node.log("Toggling");
+
 	// Grabbing status from msg payload
-	const status = msg?.payload?.status;
+	const status: string = msg?.payload?.status;
+	const fast: boolean = msg?.payload?.fast || false;
 
 	// Checking status for correct format
 	if(status === undefined || (status !== 'off' && status !== 'on')){
@@ -91,14 +94,25 @@ async function toggle(node: SceneCommandNode, msg: any, plm: PowerLincModem, sce
 		return;
 	}
 
-	const turnOn = [0x11, 0xFF] as Byte[];
-	const turnOff = [0x13, 0x00] as Byte[];
+	// Command set
+	const on  = !fast? 0x11 : 0x12;
+	const off = !fast? 0x13 : 0x14;
+
+	const brighten = [0x15, 0x00];
+	const dim = [0x16, 0x00];
+
+	const startChange = 0x17;
+	const stopChange = 0x18;
 
 	// Determining bytes
-	const cmd = status.trim() === 'on'? turnOn : turnOff;
+	const cmd = status.trim() === 'on'? [on, 0xff] : [off, 0x00];
+
+	node.log(JSON.stringify(cmd));
 
 	// Sending command
-	const ack = await plm.sendAllLinkCommand(scene, cmd[0], cmd[1]);
+	const ack = await plm.sendAllLinkCommand(scene, cmd[0] as Byte, cmd[1] as Byte);
+
+	node.log(ack);
 
 	if(!ack){
 		node.log('Could not execute command');
