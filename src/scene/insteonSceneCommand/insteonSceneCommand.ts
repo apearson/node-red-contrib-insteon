@@ -107,12 +107,8 @@ async function toggle(node: SceneCommandNode, msg: any, plm: PowerLincModem, sce
 	// Determining bytes
 	const cmd = status.trim() === 'on'? [on, 0xff] : [off, 0x00];
 
-	node.log(JSON.stringify(cmd));
-
 	// Sending command
 	const ack = await plm.sendAllLinkCommand(scene, cmd[0] as Byte, cmd[1] as Byte);
-
-	node.log(ack);
 
 	if(!ack){
 		node.log('Could not execute command');
