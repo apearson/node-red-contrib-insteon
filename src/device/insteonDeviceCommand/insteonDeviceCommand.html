@@ -14,7 +14,7 @@
 		inputs: 1,
 		outputs: 0,
 		icon: 'bridge.png',
-		label: function(){ return this.name || 'Device Out' },
+		label: function(){ return this.name || `${RED.nodes.node(this.device).name} Out` || 'Device Out' },
 		paletteLabel: 'Device Out',
 	});
 
