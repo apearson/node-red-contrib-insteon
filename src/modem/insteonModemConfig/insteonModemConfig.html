@@ -1,6 +1,5 @@
 <!-- Node Registration -->
 <script type='text/javascript'>
-
 	//#region Data Methods
 
 	const getInsteonPorts = (success, error) => {
@@ -15,9 +14,10 @@
 
 	const getModemLinks = (id, success, error) => {
 		$.ajax({
-			method: 'GET',
+			method: 'POST',
 			dataType: "JSON",
-			url: 'insteon-plm-getlinks?id=' + id,
+			url: 'insteon-plm-getlinks',
+			data: { id },
 			success,
 			error
 		});
@@ -25,8 +25,8 @@
 
 	const manageDevice = (id, address, action, success, error) => {
 		$.ajax({
-			method: 'post',
-			dataType: 'json',
+			method: 'POST',
+			dataType: 'JSON',
 			url: 'insteon-plm-manage-device',
 			data: { id, action, address },
 			success,
@@ -228,13 +228,13 @@
 		/* Add device UI */
 		$('#add_device').click(e => {
 			e.preventDefault();
-			submitAddress(this, 'addNewDevice', $('#new_device_address').val());
+			submitAddress(node, 'addNewDevice', $('#new_device_address').val());
 		});
 
 		/* Remove device UI */
 		$('#remove_device').click(e => {
 			e.preventDefault();
-			submitAddress(this, 'removeDevice', $('#device_address_to_remove').val());
+			submitAddress(node, 'removeDevice', $('#device_address_to_remove').val());
 		});
 	}
 
