@@ -14,7 +14,7 @@
 		inputs: 1,
 		outputs: 0,
 		icon: 'bridge-dash.png',
-		label: function(){ return this.name || `${RED.nodes.node(this.scene).name} Out` || 'Scene Out' },
+		label: function(){ return this.name || RED.nodes.node(this.scene) !== null ? `${RED.nodes.node(this.scene).name} Out` : 'Scene Out' },
 		paletteLabel: 'Scene Out',
 	});
 
