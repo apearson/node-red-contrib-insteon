@@ -73,7 +73,8 @@
 		$('#device_address_to_remove').empty();
 
 		// Sorting links by group
-		links = links.sort((a, b) => a.type > b.type ? 1 : a.group > b.group ? 1 : b.group > a.group ? -1 : 0);
+		links = links.sort((a, b) => a.group > b.group ? 1 : b.group > a.group ? -1 : 0)
+		             .sort((a, b) => a.type === b.type ? 0 : a.type < b.type ? 1 : -1);
 
 		// For each link in PLM render a device row
 		links.forEach(link => {
