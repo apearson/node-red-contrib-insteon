@@ -150,10 +150,10 @@ async function getInsteonLinks(RED: Red, req: Request, res: Response){
 async function manageDevice(RED: Red, req: Request, res: Response){
 
 	try{
-		let PLMConfigNode = validatePLMConnection(RED, req.body.configNodeId);
+		let PLMConfigNode = validatePLMConnection(RED, req.query.id);
 
 		/* Validate the device address */
-		let address = Utilities.toAddressArray(req.body.address) as Byte[];
+		let address = Utilities.toAddressArray(req.query.address) as Byte[];
 		if(address.length !== 3){
 			// Server side failure
 			res.status(400);

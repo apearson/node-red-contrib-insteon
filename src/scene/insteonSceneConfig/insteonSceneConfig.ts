@@ -1,7 +1,6 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import { InsteonModemConfigNode, InsteonDeviceConfigNode, InsteonSceneConfigNode } from '../../types/types';
-import { Byte, Packet } from 'insteon-plm';
+import { InsteonModemConfigNode, InsteonSceneConfigNode } from '../../types/types';
 
 /* Interfaces */
 interface SceneConfigNodeProps extends NodeProperties {
@@ -31,8 +30,6 @@ export = function(RED: Red) {
 
 		// Setting up rest of device
 		setupDevice(this);
-
-		// Listeners
 	});
 };
 
@@ -56,25 +53,18 @@ async function setupDevice(node: InsteonSceneConfigNode){
 	// Listeners
 	node.on('close', () => onNodeClose(node));
 
-	// Emitting all messages
-	node.PLMConfigNode.plm.on('**', p => onPacket(node, p));
-
 	// Emitting on ready
 	node.log('Ready');
-	node.emit('ready', 'Listening')
+	node.emit('ready', 'Ready')
 }
 
 //#endregion
 
 //#region Event Functions
 
-function onPacket(node: InsteonSceneConfigNode, packet: Packet.Packet){
-	node.emit('packet', packet);
-}
-
 function onNodeClose(node: InsteonSceneConfigNode){
 	/* Closing Device */
-	node.log('Closing device');
+	node.log('Closing scene\n');
 }
 
 //#endregion

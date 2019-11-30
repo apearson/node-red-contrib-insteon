@@ -43,7 +43,6 @@ export = function(RED: Red){
 
 		// On input pass the messag
 		this.on('input', (msg) => onInput(msg, this));
-
 	});
 };
 
