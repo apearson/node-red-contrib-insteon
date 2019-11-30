@@ -41,7 +41,7 @@ export = function(RED: Red){
 	/* Server to provide the PLM's Link database
 	 * The ajax call to this node must post the node_id of the modem config node
 	 */
-	RED.httpAdmin.get(
+	RED.httpAdmin.post(
 		"/insteon-plm-getlinks",
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => getInsteonLinks(RED, req, res)
@@ -130,30 +130,28 @@ async function getInsteonPorts(req: Request, res: Response){
 		res.json(devices);
 	}
 	catch(e){
-		res.status(500).send({message: 'An error has occured', caught: e});
+		res.status(500).send({message: 'An error has occured', caught: e.message});
 	}
 
 }
 async function getInsteonLinks(RED: Red, req: Request, res: Response){
-
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
-		let PLMConfigNode = validatePLMConnection(RED, req.query.id);
+		let PLMConfigNode = validatePLMConnection(RED, req.body.id);
 
 		/* Send the links back to the client */
 		res.json(PLMConfigNode?.plm?.links ?? []);
 	}
 	catch(e){
-		res.status(500).send({message: 'An error has occured', caught: e});
+		res.status(500).send({message: 'An error has occured', caught: e.message});
 	}
 }
 async function manageDevice(RED: Red, req: Request, res: Response){
-
 	try{
-		let PLMConfigNode = validatePLMConnection(RED, req.query.id);
+		let PLMConfigNode = validatePLMConnection(RED, req.body.id);
 
 		/* Validate the device address */
-		let address = Utilities.toAddressArray(req.query.address) as Byte[];
+		let address = Utilities.toAddressArray(req.body.address) as Byte[];
 		if(address.length !== 3){
 			// Server side failure
 			res.status(400);
@@ -191,7 +189,7 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 
 	}
 	catch(e){
-		res.status(500).send({message: 'An error has occured', caught: e});
+		res.status(500).send({message: 'An error has occured', caught: e.message});
 	}
 }
 
