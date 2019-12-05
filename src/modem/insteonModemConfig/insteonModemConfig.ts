@@ -138,9 +138,9 @@ async function getInsteonLinks(RED: Red, req: Request, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
 		let PLMConfigNode = validatePLMConnection(RED, req.body.id);
-
+		
 		/* Send the links back to the client */
-		res.json(PLMConfigNode?.plm?.links ?? []);
+		res.json(await PLMConfigNode?.plm?.syncLinks() ?? []);
 	}
 	catch(e){
 		res.status(500).send({message: 'An error has occured', caught: e.message});
@@ -151,8 +151,7 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 		let PLMConfigNode = validatePLMConnection(RED, req.body.id);
 
 		/* Validate the device address */
-		let address = Utilities.toAddressArray(req.body.address) as Byte[];
-		if(address.length !== 3){
+		if(!Utilities.validateAddress(req.body.address)){
 			// Server side failure
 			res.status(400);
 			res.json({
@@ -161,16 +160,26 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 			return;
 		}
 
+		let address = Utilities.toAddressArray(req.body.address) as Byte[];
+
 		let result: any;
 		let messageVerb = "";
+		let deviceCache = {} as any;
+		
 		if(req.body.action === 'addNewDevice'){
 			result = await PLMConfigNode?.plm?.linkDevice(address);
-			let messageVerb = "linked";
+			messageVerb = "linked";
+			
+			await sleep(1000);
+			
 			/* Get device info after we've added it */
-			// let deviceInfo = await PLMConfigNode.plm!.queryDeviceInfo(address);
+			deviceCache.info = await PLMConfigNode.plm!.queryDeviceInfo(address);
 		}else if(req.body.action === 'removeDevice'){
 			/* Get device info before we remove it */
-			// let deviceInfo = await PLMConfigNode.plm!.queryDeviceInfo(address);
+			deviceCache.info = await PLMConfigNode.plm!.queryDeviceInfo(address);
+			
+			await sleep(1000);
+			
 			result = await PLMConfigNode?.plm?.unlinkDevice(address);
 			messageVerb = "unlinked";
 		}else{
@@ -182,9 +191,9 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 		res.json({
 			result: result,
 			links: links,
-			// deviceInfo: deviceInfo,
-			// message: `Device ${deviceInfo.description} was ${messageVerb}`
-			message: `Device was ${messageVerb}`
+			action: req.body.action,
+			deviceCache: deviceCache,
+			message: `Device ${deviceCache.info.description} was ${messageVerb}`
 		});
 
 	}
@@ -231,6 +240,10 @@ function validatePLMConnection(RED: Red, configNodeId: string){
 		throw Error("The PLM is not connected. Cannot load links.");
 
 	return PLMConfigNode;
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 //#endregion
