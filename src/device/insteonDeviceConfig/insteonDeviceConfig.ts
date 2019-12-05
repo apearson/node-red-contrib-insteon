@@ -11,26 +11,32 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
 import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../types/types';
-import { Byte, Packet, InsteonDevice } from 'insteon-plm';
+import { Byte, Packet, InsteonDevice, Utilities } from 'insteon-plm';
 
 /* Interfaces */
 interface DeviceConfigNodeProps extends NodeProperties {
 	modem: string;
-	address1: string;
-	address2: string;
-	address3: string;
+	address: string;
+	cache: string;
 }
 
 /* Exporting Node Function */
 export = function(RED: Red) {
 
-	// Registering node type and a constructor, callback function can't be async because of node red
+	// Registering node type and a constructor, callback function can't be async because of node red. Fired on every deploy of the node.
 	RED.nodes.registerType('insteon-device-config', function(this: InsteonDeviceConfigNode, config: DeviceConfigNodeProps) {
 		// Creating actual node
 		RED.nodes.createNode(this, config);
 
 		// Converting config into address
-		this.address = [parseInt(config.address1, 16), parseInt(config.address2, 16), parseInt(config.address3, 16)] as Byte[];
+		this.address = Utilities.toAddressArray(config.address) as Byte[];
+		
+		// Checking to see if we have cached data
+		try{
+			this.cache = JSON.parse(config.cache);
+		}catch(e){
+			this.cache = {};
+		}
 
 		// Checking if we don't have a modem
 		if(!config.modem){
@@ -62,9 +68,9 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 		node.PLMConfigNode.plm.once('ready', _ => setupDevice(node));
 		return;
 	}
-
+	
 	// Instanciate the device for use
-	node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: true, syncLinks: false });
+	node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: true, syncLinks: false, cache: node.cache });
 
 	// Checking we have a device
 	if(!node.device){
