@@ -92,14 +92,14 @@
 					html: `${addressToString(link.device)}: Add &raquo;`,
 					click: function(e){
 						e.preventDefault();
+						// Create a new config node for this device, then navigate to it
 						let newNode = {
 							id: RED.nodes.id(),
 							_def: RED.nodes.getType("insteon-device-config"),
 							type: "insteon-device-config",
 							users: [],
-							address1: link.device[0].toString(16),
-							address2: link.device[1].toString(16),
-							address3: link.device[2].toString(16)
+							address: `${link.device[0].toString(16)}.${link.device[1].toString(16)}.${link.device[2].toString(16)}`,
+							cache: JSON.stringify({})
 						}
 						RED.nodes.add(newNode);
 						RED.editor.editConfig('', 'insteon-device-config', newNode.id);
@@ -174,20 +174,30 @@
 			data => {
 				$('#add_device,#remove_device').prop('disabled', false);
 
-				if(data.error){
-					sendErrorToDebugConsole(node.id,data.message);
-					return;
-				}
-
 				alert(data.message);
-
+				
+				// Create the config node
+				if(data.action === 'addNewDevice'){
+					let newNode = {
+						id: RED.nodes.id(),
+						_def: RED.nodes.getType("insteon-device-config"),
+						type: "insteon-device-config",
+						users: [],
+						address: $('#new_device_address').val(),
+						name: $('#new_device_name').val(),
+						cache: JSON.stringify(data.deviceCache)
+					}
+					RED.nodes.add(newNode);
+				}
+				
 				$('#new_device_address').val('');
+				$('#new_device_name').val('');
 				renderLinksTable(data.links);
 			},
 			e => {
 				$('#add_device,#remove_device').prop('disabled', false);
 
-				sendErrorToDebugConsole(node.id,error);
+				sendErrorToDebugConsole(node.id,`${e.responseJSON.message}: ${e.responseJSON.caught}`);
 			}
 		);
 	}
@@ -207,19 +217,18 @@
 		let devices = [];
 
 		RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : null);
-
 		return devices.find(d =>
-			parseInt(d.address1, 16) === address[0] &&
-			parseInt(d.address2, 16) === address[1] &&
-			parseInt(d.address3, 16) === address[2]
+			d.address.toUpperCase() === addressToString(address)
 		) || null;
 	}
 
 	/* This is not conventional, but we need a way to output error messages to the debug window in case the ajax call fails
 	 * node.error() is not in context for ajax calls
 	 */
-	const sendErrorToDebugConsole = (name, message) =>
+	const sendErrorToDebugConsole = (name, message) => {
+		$("#red-ui-tab-debug-link-button").click();
 		RED.debug.handleDebugMessage({ name:name,msg:message, level: 20 });
+	}
 
 	//#endregion
 
@@ -302,7 +311,8 @@
 	  <div>
 		  <p>Links a new device with your PLM. If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
 		  <p>After a new device is linked with the PLM, you can configure the device from the Subscribe or Command nodes.</p>
-		  <input id='new_device_address' type='text' placeholder='AA.BB.CC' />
+		  <input id='new_device_address' style='width: 100px' type='text' placeholder='AA.BB.CC' name='notASearchField1' />
+		  <input id='new_device_name' style='width: 175px' type='text' placeholder='Living Room Switch' name='notASearchField2' />
 		  <button id='add_device' class='btn'>Add Device</button>
 	  </div>
 
