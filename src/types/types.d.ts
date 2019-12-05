@@ -15,6 +15,7 @@ interface InsteonDeviceConfigNode extends Node {
 	address: Byte[];
 	PLMConfigNode?: InsteonModemConfigNode;
 	device?: InsteonDevice;
+	cache?: any;
 }
 
 interface InsteonSceneConfigNode extends Node {
