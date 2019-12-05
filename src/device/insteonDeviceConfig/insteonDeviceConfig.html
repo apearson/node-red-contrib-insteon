@@ -1,6 +1,8 @@
 <!-- Node Registration -->
 <script type="text/javascript">
 
+	let cache = {};
+	
 	/** Type Registration **/
 	RED.nodes.registerType('insteon-device-config',{
 		category: 'config',
@@ -9,9 +11,20 @@
 		defaults: {
 			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' },
-			address1: { value: '', validate },
-			address2: { value: '', validate },
-			address3: { value: '', validate },
+			address: { value: '', validate },
+			cache: { value: ''},
+		},
+		oneditprepare: function(){
+			/* unserialize the cache */
+			try{
+				cache = JSON.parse($("#node-config-input-cache").val());
+			}catch(e){
+			}
+		
+			if(cache.info !== null){
+				/* Display device description in the UI */
+				$('#device-description').text(cache.info.description);
+			}
 		},
 		inputs: 0,
 		outputs: 0,
@@ -46,7 +59,7 @@
 		}
 	}
 
-	//#endregion
+	//#endregion	
 
 </script>
 
@@ -62,10 +75,14 @@
 	</div>
 	<div class="form-row">
 		<label for="node-config-input-address"><i class="icon-tag"></i>Address</label>
-		<input type="text" style="width: 23%" id="node-config-input-address1" placeholder="aa" /> .
-		<input type="text" style="width: 23%" id="node-config-input-address2" placeholder="bb" /> .
-		<input type="text" style="width: 23%" id="node-config-input-address3" placeholder="cc" />
+		<input type="text" style="width: 80px" id="node-config-input-address" placeholder="AA.BB.CC" />
+		<span id="device-description"></span>		
 	</div>
+	<div class="form-row">
+		<label for="node-config-input-cache"><i class="icon-tag"></i>cache</label>
+		<input type="text" id="node-config-input-cache" placeholder="" disabled="true" />
+	</div>
+
 </script>
 
 <!-- Help Panel -->
