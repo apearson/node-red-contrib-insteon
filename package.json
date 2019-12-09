@@ -22,6 +22,8 @@
 			"insteonPowerLincModem": "./dist/modem/insteonPowerLincModem/insteonPowerLincModem.js",
 
 			"insteonDeviceConfig": "./dist/device/insteonDeviceConfig/insteonDeviceConfig.js",
+			"insteonDimmableLightingDeviceConfig": "./dist/device/insteonDeviceConfig/insteonDimmableLightingDeviceConfig/insteonDimmableLightingDeviceConfig.js",
+			"insteonSwitchedLightingDeviceConfig": "./dist/device/insteonDeviceConfig/insteonSwitchedLightingDeviceConfig/insteonSwitchedLightingDeviceConfig.js",
 			"insteonDeviceSubscribe": "./dist/device/insteonDeviceSubscribe/insteonDeviceSubscribe.js",
 			"insteonDeviceCommand": "./dist/device/insteonDeviceCommand/insteonDeviceCommand.js",
 
