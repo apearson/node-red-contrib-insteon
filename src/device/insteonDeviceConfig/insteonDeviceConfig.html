@@ -1,8 +1,5 @@
 <!-- Node Registration -->
-<script type="text/javascript">
-
-	let cache = {};
-	
+<script type="text/javascript">	
 	/** Type Registration **/
 	RED.nodes.registerType('insteon-device-config',{
 		category: 'config',
@@ -11,55 +8,126 @@
 		defaults: {
 			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' },
-			address: { value: '', validate },
-			cache: { value: ''},
+			address: { value: '', function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
+			cache: { value: '' },
 		},
 		oneditprepare: function(){
-			/* unserialize the cache */
-			try{
-				cache = JSON.parse($("#node-config-input-cache").val());
-			}catch(e){
-			}
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			/* parse the cache json */
+			let cache = insteon.device.readCache();
+			
+			insteon.device.renderDescription(cache);
 		
-			if(cache.info !== null){
-				/* Display device description in the UI */
-				$('#device-description').text(cache.info.description);
-			}
+			/* Setting up settings accordion */
+			$('#accordion').accordion({heightStyle: 'fill'});
 		},
 		inputs: 0,
 		outputs: 0,
 		icon: 'light.png',
-		label: function(){ return this.name || 'Insteon Device' }
+		label: function(){ return this.name || 'Insteon Device' },
+		
+		
+		readCache: function(){
+			let cache = {};
+			
+			/* unserialize the cache */
+			try{
+				cache = JSON.parse($("#node-config-input-cache").val());
+			}catch(e){}
+			
+			return cache;
+		},
+		writeCache: function(cache){
+			/* Update the cache input */
+			$('#node-config-input-cache').val(JSON.stringify(cache));
+			
+			/* Trigger a deploy to save the cache. This is necessary to prevent the UI from going out of sync with the hardware */
+			$("#node-config-dialog-ok").click();
+			$("#red-ui-header-button-deploy-icon").click();			
+		},
+		
+		/* Assemble an object containing all data needed to make an ajax request that will update a device's configuration
+		 * The data must be serialized in order for it to be properly posted by postConfig and decoded by the server
+		 */
+		serializeConfig: function(){
+			let data = {};
+			
+			data.plmConfigNode = $("#node-config-input-modem").val();
+			data.address = $('#node-config-input-address').val();
+
+			/* Add properties for each checkbox and set value to checked state */
+			$(".insteon-device-config:checkbox").map((i,e) => {
+				data[$(e).prop("name")] = $(e).prop("checked");
+			});
+			
+			/* Add properties for each input */
+			$(".insteon-device-config").not(":checkbox").map((i,e) => {
+				data[$(e).prop("name")] = $(e).val();
+			});
+		
+			return JSON.stringify(data);
+		},
+		
+		postConfig: function(args){
+			$.ajax({
+				method: 'POST',
+				dataType: 'JSON',
+				contentType: 'application/json',
+				url: args.url,
+				data: args.data,
+				success: args.success,
+				error: args.error,
+			});
+		},
+		
+		//#region render device config functions
+		onDeviceEditPrepare: function(node, url){
+			/* import the JS functions from the modem & top level device config node */
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			/* parse the cache json into an object */
+			let cache = insteon.device.readCache();
+		
+			/* put the device description in the UI */
+			$('#device-description').text(cache.info.description);
+					
+			/* render the links table */
+	
+			/* setup the write config button */
+			$('#update-device-config').click(function(){
+				$('#update-device-config').addClass('disabled');
+				$('#update-device-config').prop('disabled', true);
+			
+				insteon.device.postConfig({
+					url: url,
+					data: insteon.device.serializeConfig(),
+					success: data => {
+						$('#update-device-config').removeClass('disabled');
+						$('#update-device-config').prop('disabled', false);
+					
+						cache.config = data.configCache;
+						cache.extendedConfig = data.extendedConfigCache;
+						insteon.device.writeCache(cache);
+					},
+					error: e => {
+						$('#update-device-config').removeClass('disabled');
+						$('#update-device-config').prop('disabled', false);
+
+						insteon.sendErrorToDebugConsole(node.id,`${e.responseJSON.message}: ${e.responseJSON.caught}`);						
+					}
+				});
+			});
+
+			/* Setting up settings accordion */
+			$('#accordion').accordion({heightStyle: 'fill'});
+		}
+		
+		//#region
 	});
 
-	//#region Utility Methods
-
-	function validate(v){
-		/* Check to see if this devie address was used in another node */
-		let devices = [];
-		RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : "");
-		let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === v.toLowerCase());
-
-		if(duplicate.length > 0){
-			duplicate[0].dirty = true;
-			duplicate[0].highlighted = true;
-			RED.view.redraw();
-
-			alert("`"+duplicate[0].name + "` is already using this address.");
-			return false;
-		}
-		else{
-			/* Clear the red highlighted nodes */
-			devices.forEach(device => {
-				device.dirty = true;
-				device.highlighted = false;
-				RED.view.redraw();
-			});
-			return true;
-		}
-	}
-
-	//#endregion	
 
 </script>
 

@@ -19,18 +19,22 @@
 	//#region Lifecycle Methods
 
 	function onEditPrepare(){
-		// This: the current node
+		let insteon = RED.nodes.getType("insteon-modem-config");
+		
+		// Select the value in the subtype drop down
+		$(`#node-input-subtype option[value="${this.subtype}"]`).attr('selected', 'selected');
 
-			// Select the value in the subtype drop down
-			$(`#node-input-subtype option[value="${this.subtype}"]`).attr('selected', 'selected');
-
-			// Check the boxes for the events that have been selected
+		// Check the boxes for the events that have been selected
+		if(this.selectedEvents){
 			this.selectedEvents.map(el => $(`#${el.id}`).prop('checked',true));
-	}
+		}
 
+		insteon.buildDeviceSelectOptions('node-input-device',this.device);
+	}
+	
 	function onEditSave(){
-			// This: the current node
-			this.selectedEvents = [];
+		// This: the current node
+		this.selectedEvents = [];
 
 		// reach which events were selected and push them into the config
 		$(".event-selection input").each(onInputCheck);
@@ -45,7 +49,8 @@
 		color: '#2e88c5',
 		align: 'left',
 		defaults: {
-			device: { value: '', type: 'insteon-device-config' },
+			// device: { value: '', type: 'insteon-device-config' },
+			device: { value: '', required: true },
 			name: { value: '' },
 			subtype: {value: ''},
 			selectedEvents: { value: null }
@@ -67,7 +72,8 @@
 <script type="text/x-red" data-template-name="insteon-device-subscribe">
 	<div class="form-row">
 		<label for="node-input-device">Insteon Device</label>
-		<input type="text" id="node-input-device" placeholder="xyz">
+		<!-- <input type="text" id="node-input-device"> -->
+		<select id="node-input-device"><option value=""></option></select>
 	</div>
 	<div class="form-row">
 		<label for="node-input-name"><i class="icon-tag"></i> Name</label>

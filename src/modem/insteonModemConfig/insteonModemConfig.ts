@@ -3,6 +3,7 @@ import { Red, NodeProperties } from 'node-red';
 import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
 import { InsteonModemConfigNode } from '../../types/types';
 import { Request, Response } from 'express';
+import { validatePLMConnection } from '../../device/insteonDeviceConfig/configMethods';
 
 /* Interfaces */
 interface PLMConfigNodeProps extends NodeProperties {
@@ -55,6 +56,7 @@ export = function(RED: Red){
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => manageDevice(RED, req, res)
 	);
+	
 };
 
 //#region Connection Functions
@@ -173,7 +175,14 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 			await sleep(1000);
 			
 			/* Get device info after we've added it */
-			deviceCache.info = await PLMConfigNode.plm!.queryDeviceInfo(address);
+			deviceCache.info = await PLMConfigNode.plm?.queryDeviceInfo(address);
+			
+			let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false, cache: deviceCache });
+			
+			deviceCache.config = await device?.readConfig();
+			deviceCache.extendedConfig = await device?.readExtendedConfig();
+			deviceCache.links = await device?.syncLinks();
+			
 		}else if(req.body.action === 'removeDevice'){
 			/* Get device info before we remove it */
 			deviceCache.info = await PLMConfigNode.plm!.queryDeviceInfo(address);
@@ -193,6 +202,7 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 			links: links,
 			action: req.body.action,
 			deviceCache: deviceCache,
+			configNodeType: getConfigNodeType(deviceCache.info.cat, deviceCache.info.subcat),
 			message: `Device ${deviceCache.info.description} was ${messageVerb}`
 		});
 
@@ -222,24 +232,48 @@ function removeOldPLM(node: InsteonModemConfigNode){
 
 //#region Utlity Functions
 
-/* Function that takes a node.id and returns the node if it is valid
- * The node must be a PLMConfig node, and the PLM must be connected
- */
-function validatePLMConnection(RED: Red, configNodeId: string){
-	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
-	let PLMConfigNode = RED.nodes.getNode(configNodeId) as InsteonModemConfigNode;
+/*
+	Determine which config node type should be used based on the device's cat & subcat.
+	This is really similar to the factory method
+*/
+function getConfigNodeType(cat: Byte, subcat: Byte){
+	switch(Number(cat)){
+		case 0x01:
+			switch(Number(subcat)){
+				case 0x1C: return 'insteon-keypad-dimmer-device-config';
+				default: return 'insteon-dimmable-lighting-device-config';
+			}
 
-	/* Validate that the nodeId received is referencing a PLMConfig node */
-	if(PLMConfigNode == null || PLMConfigNode.type !== 'insteon-modem-config' )
-		throw Error("Invalid config node specified.");
+		case 0x02: return 'insteon-switched-lighting-device-config';
 
-	/* Check to see if the Config Node is connected to the PLM. If the node hasn't been deployed yet, it won't be connected
-	 * The best thing would be to connect, get/return the links then disconnect, but for now we will just send an error
-	 */
-	if(PLMConfigNode.plm === null || !PLMConfigNode.plm?.connected)
-		throw Error("The PLM is not connected. Cannot load links.");
+		case 0x07:
+			switch(Number(subcat)){
+				case 0x00: return 'insteon-iolinc-device-config';
+				default: return 'insteon-sensor-actuator-device-config';
+			}
 
-	return PLMConfigNode;
+		case 0x10:
+			switch(Number(subcat)){
+				case 0x01:
+				case 0x03:
+				case 0x04:
+				case 0x05: return 'insteon-motion-sensor-device-config';
+
+				case 0x02:
+				case 0x06:
+				case 0x07:
+				case 0x09:
+				case 0x11:
+				case 0x14:
+				case 0x015: return 'insteon-open-close-sensor-device-config';
+
+				case 0x08: return 'insteon-leak-sensor-device-config';
+
+				default: return 'insteon-security-defice-config';
+			}
+
+		default: return 'insteon-device-config';
+	}
 }
 
 function sleep(ms: number) {
