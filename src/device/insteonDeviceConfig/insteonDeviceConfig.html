@@ -48,24 +48,34 @@
 			$("#red-ui-header-button-deploy-icon").click();			
 		},
 		
-		/* Assemble an object containing all data needed to make an ajax request that will update a device's configuration
+		/* 
+		 * Assemble an object containing all data needed to make an ajax request that will update a device's configuration
+		 * Compare that data with the cache data - and indicate if there was a change. The backend can skip unchanged records to save time
 		 * The data must be serialized in order for it to be properly posted by postConfig and decoded by the server
 		 */
 		serializeConfig: function(){
-			let data = {};
+			let data = {changed: []};
 			
 			data.plmConfigNode = $("#node-config-input-modem").val();
 			data.address = $('#node-config-input-address').val();
 
 			/* Add properties for each checkbox and set value to checked state */
 			$(".insteon-device-config:checkbox").map((i,e) => {
+				// If the present state does not equal the initial state, put the property name in the changed array
+				$(e).data("initial") != $(e).prop("checked") ? data.changed.push($(e).prop("name")) : "";
+				
 				data[$(e).prop("name")] = $(e).prop("checked");
 			});
 			
 			/* Add properties for each input */
 			$(".insteon-device-config").not(":checkbox").map((i,e) => {
+				// If the present value does not equal the initial value, put the property name in the changed array
+				$(e).data("initial") != $(e).val() ? data.changed.push($(e).prop("name")) : "";
+				
 				data[$(e).prop("name")] = $(e).val();
 			});
+			
+			/* Add the links that changed */
 		
 			return JSON.stringify(data);
 		},
@@ -204,7 +214,9 @@
 
 			// Table row
 			let row = $('<tr/>');
-			let css = link.Type.active ? 'white-space:nowrap' : 'white-space:nowrap; text-decoration: linethrough; color: #AAA';
+			let deletedCss = 'white-space:nowrap; text-decoration: line-through; color: #AAA';
+			let activeCss = 'white-space:nowrap';
+			let css = link.Type.active ? activeCss : deletedCss;
 
 			// Device Column
 			deviceCell.appendTo(row);
@@ -217,7 +229,7 @@
 			// Action buttons
 			let actionCell = $('<td>', { style: css });
 			$('<input>',{type: 'hidden', class: 'linkAddress', value: link.address}).appendTo(actionCell);
-			$('<button>',{class: 'btn delete'}).text("×").appendTo(actionCell);
+			insteon.device.renderLinkDeleteButton(activeCss,deletedCss).appendTo(actionCell);
 
 			actionCell.appendTo(row);
 
@@ -243,7 +255,7 @@
 				.text(link.group)
 				.appendTo(row);
 
-			// ToDo: Hide these next 2 columns if the device is not dimmable
+			// ToDo: Adjust these next 2 columns if the device is not dimmable
 			// On Level Column
 			let onLevelCell = $('<td>', { style: css })
 				.appendTo(row);
@@ -273,7 +285,16 @@
 			// Action buttons
 			let actionCell = $('<td>', { style: css });
 			$('<input>',{type: 'hidden', class: 'linkAddress', value: link.address}).appendTo(actionCell);
-			$('<button>',{
+			insteon.device.renderLinkDeleteButton(activeCss,deletedCss).appendTo(actionCell);
+
+			actionCell.appendTo(row);
+			
+			// Returning row
+			return row;
+		},
+		
+		renderLinkDeleteButton: function(activeCss,deletedCss){
+			let button = $('<button>',{
 				class: 'btn delete',
 				click: function(e){
 					
@@ -297,13 +318,10 @@
 						});
 					}
 				}
-			}).text("×").appendTo(actionCell);
-
-			actionCell.appendTo(row);
+			}).text("×");
 			
-			// Returning row
-			return row;
-		},		
+			return button;
+		}
 		
 		//#region
 		

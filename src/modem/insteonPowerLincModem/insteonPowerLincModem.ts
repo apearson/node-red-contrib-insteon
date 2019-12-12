@@ -36,7 +36,7 @@ export = function(RED: Red){
 		this.PLMConfigNode.on('error', e => onError(this, e));
 		this.PLMConfigNode.on('packet', p => onPacket(this, p));
 
-		// Setting inital status
+		// Setting initial status
 		(this.PLMConfigNode.plm && this.PLMConfigNode.plm.connected)
 			? this.status({fill: 'green', shape: 'dot', text: 'Connected'})
 			: this.status({fill: 'red', shape: 'dot', text: 'Disconnected'});

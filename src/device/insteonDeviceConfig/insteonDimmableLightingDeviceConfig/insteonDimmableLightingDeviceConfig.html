@@ -24,12 +24,12 @@
 			/* Initalize the device config panel */
 			insteon.device.onDeviceEditPrepare(node, 'insteon-dimmable-lighting-device-config');
 			
-			/* setup the checkbox states */
-			$("#node-config-input-program-lock").prop('checked',cache.config.programLock);
-			$("#node-config-input-led-on-tx").prop('checked',cache.config.LEDonTX);
-			$("#node-config-input-load-sense").prop('checked',cache.config.loadSense);
-			$("#node-config-input-led-disabled").prop('checked',cache.config.LEDDisabled);
-			$("#node-config-input-resume-dim").prop('checked',cache.config.resumeDim);
+			/* setup the checkbox states. store the initial value in data so that we may send only the changed values */
+			$("#node-config-input-program-lock").prop('checked',cache.config.programLock).data('initial',cache.config.programLock);
+			$("#node-config-input-led-on-tx").prop('checked',cache.config.LEDonTX).data('initial',cache.config.LEDonTX);
+			$("#node-config-input-load-sense").prop('checked',cache.config.loadSense).data('initial',cache.config.loadSense);
+			$("#node-config-input-led-disabled").prop('checked',cache.config.LEDDisabled).data('initial',cache.config.LEDDisabled);
+			$("#node-config-input-resume-dim").prop('checked',cache.config.resumeDim).data('initial',cache.config.resumeDim);
 			
 			/* Ramp rate slider */
 			let rampHandle = $("#node-config-input-ramp-rate-slider .ui-slider-handle");
@@ -39,7 +39,10 @@
 				value: 31 - cache.extendedConfig.rampRate,
 		        create: function() {
 					let val = $(this).slider("value");
-					$("#node-config-input-ramp-rate").val(31 - val); // invert the value since the insteon range is backward
+					$("#node-config-input-ramp-rate")
+						.val(31 - val) // invert the value since the insteon range is backward
+						.data('initial',cache.extendedConfig.rampRate);
+
 					rampHandle.text(insteon.device.rampRates[val]);
 		        },
 		        slide: function( event, ui ) {
@@ -57,7 +60,10 @@
 				value: cache.extendedConfig.onLevel,
 		        create: function() {
 					let val = $(this).slider("value");
-					$("#node-config-input-on-level").val(val);
+					$("#node-config-input-on-level")
+						.val(val)
+						.data('initial',cache.extendedConfig.onLevel);
+
 					onLevelHandle.text(`${Math.round((val / 255) * 100)}%`);
 		        },
 		        slide: function( event, ui ) {
