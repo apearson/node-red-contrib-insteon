@@ -4,7 +4,9 @@
 	RED.nodes.registerType('insteon-modem-config',{
 		category: 'config',
 		defaults: {
-			path: { value: '', required: true }
+			path: { value: '', required: true },
+			name: { value: '' },
+			address: { value: '', function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
 		},
 		label: function(){
 			return this.path || 'Insteon Modem'
@@ -270,7 +272,7 @@
 
 			let devices = [];
 
-			RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) !== null ? devices.push(c) : null);
+			RED.nodes.eachConfig(c => c.type.match(/insteon.*device|modem.*config/) !== null ? devices.push(c) : null);
 			return devices.find(d =>
 				d.address.toUpperCase() === insteon.addressToString(address)
 			) || null;
@@ -352,6 +354,15 @@
 		<input type='text' id='node-config-input-path' style='width:66%;'>
 		<a id='node-config-lookup-modems' class='btn'><i id='node-config-lookup-modems-icon' class='fa fa-search'></i></a>
 	</div>
+	<div class='form-row'>
+		<label for='node-config-input-name'>Name</label>
+		<input type='text' id='node-config-input-name' placeholder='MyPLM' style='width:66%;'>
+	</div>
+	<div class='form-row'>
+		<label for='node-config-input-address'>Address</label>
+		<input type='text' id='node-config-input-address' placeholder='AA.BB.CC' style='width:66%;'>
+	</div>
+
 	<div class='form-row' style='height: 500px'>
 
 	<div id='accordion'>
