@@ -43,6 +43,7 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 		let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false }) as DimmableLightingDevice;
 		
 		/* write each of the configuration settings */
+		// testing sleep to see if it makes this process more reliable
 		await device?.setProgramLock(req.body.programLock);
 		await sleep(100);
 		await device?.setLEDonTX(req.body.LEDonTX);
@@ -53,9 +54,9 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 		await sleep(100);
 		await device?.setResumeDim(req.body.resumeDim);
 		await sleep(100);
-		await device?.setRampRate(parseInt(req.body.rampRate));
+		await device?.setRampRate(parseInt(req.body.rampRate) as Byte);
 		await sleep(100);
-		await device?.setOnLevel(parseInt(req.body.onLevel));
+		await device?.setOnLevel(parseInt(req.body.onLevel) as Byte);
 		await sleep(100);
 		
 		let configCache = await device?.readConfig();
