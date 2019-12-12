@@ -21,7 +21,7 @@
 			/* parse the cache json into an object */
 			let cache = insteon.device.readCache();
 			
-			/* Initalize the device config panel and get the cache */
+			/* Initalize the device config panel */
 			insteon.device.onDeviceEditPrepare(node, 'insteon-dimmable-lighting-device-config');
 			
 			/* setup the checkbox states */
@@ -32,7 +32,6 @@
 			$("#node-config-input-resume-dim").prop('checked',cache.config.resumeDim);
 			
 			/* Ramp rate slider */
-			let ramps = ["0.1 sec","0.2 sec","0.3 sec","0.5 sec","2.0 sec","4.5 sec","6.5 sec","8.5 sec","19 sec","21.5 sec","23.5 sec","26 sec","28 sec","30 sec","32 sec","34 sec","38.5 sec","43 sec","47 sec","1 min","1.5 min","2 min","2.5 min","3 min","3.5 min","4 min","4.5 min","5 min","6 min","7 min","8 min","9 min"];
 			let rampHandle = $("#node-config-input-ramp-rate-slider .ui-slider-handle");
 			$("#node-config-input-ramp-rate-slider").slider({
 				min: 0,
@@ -41,12 +40,12 @@
 		        create: function() {
 					let val = $(this).slider("value");
 					$("#node-config-input-ramp-rate").val(31 - val); // invert the value since the insteon range is backward
-					rampHandle.text(ramps[val]);
+					rampHandle.text(insteon.device.rampRates[val]);
 		        },
 		        slide: function( event, ui ) {
 					let val = ui.value;
 					$("#node-config-input-ramp-rate").val(31 - val); // invert the value since the insteon range is backward
-					rampHandle.text(ramps[val]);
+					rampHandle.text(insteon.device.rampRates[val]);
 		        }
 			});
 			
@@ -150,24 +149,46 @@
 		</div>
 		
 		<div class="red-ui-tray-toolbar">
-			<button id="update-device-config" class="ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
 		</div>		
 	  </div>
 
-	  <h3>Device Insteon Link Database</h3>
+	  <h3>Controller Links</h3>
 	  <div>
 		<table width='100%'>
 			<thead>
 				<tr>
-					<th style='text-align: left;'>Type</th>
 					<th style='text-align: left;'>Device</th>
-					<th style='text-align: left;'>Group</th>
+					<th style='text-align: left;'>Scene</th>
 					<th style='text-align: left;'>&nbsp;</th>
 				</tr>
 			</thead>
-			<tbody id='links'>
+			<tbody id='controlerLinks'>
 			</tbody>
 		</table>
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+		</div>		
+	  </div>
+
+	  <h3>Responder Links</h3>
+	  <div>
+		<table width='100%'>
+			<thead>
+				<tr>
+					<th style='text-align: left;'>Device</th>
+					<th style='text-align: left;'>Scene</th>
+					<th style='text-align: left;'>On Level</th>
+					<th style='text-align: left;'>Ramp Rate</th>
+					<th style='text-align: left;'>&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody id='responderLinks'>
+			</tbody>
+		</table>
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+		</div>		
 	  </div>
 
 	</div> <!-- End accordion -->

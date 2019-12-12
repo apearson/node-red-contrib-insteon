@@ -82,6 +82,12 @@
 			});
 		},
 		
+		//#region 
+
+		rampRates: ["0.1 sec","0.2 sec","0.3 sec","0.5 sec","2.0 sec","4.5 sec","6.5 sec","8.5 sec","19 sec","21.5 sec","23.5 sec","26 sec","28 sec","30 sec","32 sec","34 sec","38.5 sec","43 sec","47 sec","1 min","1.5 min","2 min","2.5 min","3 min","3.5 min","4 min","4.5 min","5 min","6 min","7 min","8 min","9 min"],
+
+		//#endregion
+		
 		//#region render device config functions
 		onDeviceEditPrepare: function(node, url){
 			/* import the JS functions from the modem & top level device config node */
@@ -95,26 +101,27 @@
 			$('#device-description').text(cache.info.description);
 					
 			/* render the links table */
-	
+			insteon.device.renderLinksTable(cache.links);
+			
 			/* setup the write config button */
-			$('#update-device-config').click(function(){
-				$('#update-device-config').addClass('disabled');
-				$('#update-device-config').prop('disabled', true);
+			$('.update-device-config').click(function(){
+				$('.update-device-config').addClass('disabled');
+				$('.update-device-config').prop('disabled', true);
 			
 				insteon.device.postConfig({
 					url: url,
 					data: insteon.device.serializeConfig(),
 					success: data => {
-						$('#update-device-config').removeClass('disabled');
-						$('#update-device-config').prop('disabled', false);
+						$('.update-device-config').removeClass('disabled');
+						$('.update-device-config').prop('disabled', false);
 					
 						cache.config = data.configCache;
 						cache.extendedConfig = data.extendedConfigCache;
 						insteon.device.writeCache(cache);
 					},
 					error: e => {
-						$('#update-device-config').removeClass('disabled');
-						$('#update-device-config').prop('disabled', false);
+						$('.update-device-config').removeClass('disabled');
+						$('.update-device-config').prop('disabled', false);
 
 						insteon.sendErrorToDebugConsole(node.id,`${e.responseJSON.message}: ${e.responseJSON.caught}`);						
 					}
@@ -123,9 +130,183 @@
 
 			/* Setting up settings accordion */
 			$('#accordion').accordion({heightStyle: 'fill'});
-		}
+		},
+
+		renderLinksTable: function(links){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+
+			// If no links then do nothing
+			if(links.length === 0)
+				return;
+
+			// Getting all device config nodes
+			let devices = [];
+			RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) !== null ? devices.push(c) : '');
+
+			// Clearing links and address elements
+			$('#controlerLinks, #responderLinks').empty();
+
+			// Sorting links by group
+			links = links.sort((a, b) => a.type > b.type ? 1 : a.group > b.group ? 1 : b.group > a.group ? -1 : 0);
+
+			// For each link in PLM render a device row
+			links.forEach(link => {
+				if(link.Type.highWater){
+					return; // Dont bother rendering the highwater link
+				}
+			
+				// Get the linked device's configuration node, if there is one
+				let deviceConfigNode = insteon.getDeviceNode(link.device);
+
+				/* Create the table cell for the device. If the device has a config node,
+					make it a clickable link to take the user to the edit panel for the
+					deviceConfig node.
+				*/
+				let deviceCell = $('<td>', { style:'white-space:nowrap' } );
+
+				if(deviceConfigNode === null){
+					$('<span/>')
+						.text(`${insteon.addressToString(link.device)}`)
+						.appendTo(deviceCell);
+				}
+				else{
+					$('<a>', {
+						href: '#',
+						html: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`,
+						click: function(e){
+							e.preventDefault();
+							RED.editor.editConfig('', deviceConfigNode.type, deviceConfigNode.id);
+						}
+					}).appendTo(deviceCell);
+				}
+
+				if(link.Type.control){
+					// Creating device row to hold device info
+					const row = insteon.device.renderControllerLinkRow(link, deviceCell);
+
+					// Appending device row to links table
+					row.appendTo($('#controlerLinks'));
+				}else{
+					const row = insteon.device.renderResponderLinkRow(link, deviceCell);
+					
+					// Appending device row to links table
+					row.appendTo($('#responderLinks'));
+				}
+
+			});
+		},
+		
+		/* render a table row for renderLinksTable */
+		renderControllerLinkRow: function(link, deviceCell){
+			/* import the JS functions from the modem & top level device config node */
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			// Table row
+			let row = $('<tr/>');
+			let css = link.Type.active ? 'white-space:nowrap' : 'white-space:nowrap; text-decoration: linethrough; color: #AAA';
+
+			// Device Column
+			deviceCell.appendTo(row);
+
+			// Group Column
+			$('<td>', { style: css })
+				.text(link.group)
+				.appendTo(row);
+
+			// Action buttons
+			let actionCell = $('<td>', { style: css });
+			$('<input>',{type: 'hidden', class: 'linkAddress', value: link.address}).appendTo(actionCell);
+			$('<button>',{class: 'btn delete'}).text("×").appendTo(actionCell);
+
+			actionCell.appendTo(row);
+
+			// Returning row
+			return row;
+		},
+		
+		renderResponderLinkRow: function(link, deviceCell){
+			/* import the JS functions from the modem & top level device config node */
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			// Table row
+			let row = $('<tr/>');
+			let deletedCss = 'white-space:nowrap; text-decoration: line-through; color: #AAA';
+			let activeCss = 'white-space:nowrap';
+			let css = link.Type.active ? activeCss : deletedCss;
+
+			// Device Column
+			deviceCell.appendTo(row);
+
+			// Group Column
+			$('<td>', { style: css })
+				.text(link.group)
+				.appendTo(row);
+
+			// ToDo: Hide these next 2 columns if the device is not dimmable
+			// On Level Column
+			let onLevelCell = $('<td>', { style: css })
+				.appendTo(row);
+			
+			let onLevelSelect = $('<select>', {class: 'linkOnLevel', style: 'width: 5em'}).appendTo(onLevelCell);
+			for(var i = 0; i<=100; i++){
+				$('<option>',{
+					value: i,
+					selected: i === Math.round(link.onLevel / 255 * 100)
+				}).text(`${i}%`).appendTo(onLevelSelect);
+			}
+
+			// Ramp Rate Column
+			let rampCell = $('<td>', { style: css })
+				.appendTo(row);
+				
+			let rampSelect = $('<select>', {class: 'linkRampRate', style: 'width: 6.5em'}).appendTo(rampCell);
+			insteon.device.rampRates.forEach((e,i) => {
+				$('<option>', {
+					value: i,
+					selected: i === 31 - link.rampRate
+				}).text(e).appendTo(rampSelect);
+			});
+			
+				
+
+			// Action buttons
+			let actionCell = $('<td>', { style: css });
+			$('<input>',{type: 'hidden', class: 'linkAddress', value: link.address}).appendTo(actionCell);
+			$('<button>',{
+				class: 'btn delete',
+				click: function(e){
+					
+					let tr = $(this).closest('tr');
+					
+					if(tr.hasClass('toBeDeleted')){
+						// Unflag for deletion
+						tr.removeClass('toBeDeleted');
+						
+						// Update row style
+						tr.find('td').each(function(i,td){							
+							td.style = activeCss;
+						});
+					}else if(confirm('Flag link for deletion?')){
+						// Flag for deletion
+						tr.addClass('toBeDeleted');
+					
+						// Update row style
+						tr.find('td').each(function(i,td){
+							td.style = deletedCss;
+						});
+					}
+				}
+			}).text("×").appendTo(actionCell);
+
+			actionCell.appendTo(row);
+			
+			// Returning row
+			return row;
+		},		
 		
 		//#region
+		
 	});
 
 
