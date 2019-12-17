@@ -81,7 +81,7 @@ export async function setupDevice(RED: Red, node: InsteonDeviceConfigNode, confi
 
 	// If not connected yet, wait for connection
 	if(!node.PLMConfigNode.plm.connected){
-		debug(`setupDevice ${config.address} ${config.name}: recursion? plm not connected`);
+		debug(`setupDevice ${config.address} ${config.name}: retry after PLM is ready`);
 		node.PLMConfigNode.plm.once('ready', _ => setupDevice(RED, node, config));
 		return;
 	}
