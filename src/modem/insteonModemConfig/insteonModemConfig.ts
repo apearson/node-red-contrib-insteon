@@ -1,6 +1,21 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
+import PLM, { 
+	Byte, Packet, Utilities,
+
+	DimmableLightingDevice,
+	KeypadDimmer,
+
+	SwitchedLightingDevice,
+	OutletLinc,
+
+	SecurityDevice,
+	LeakSensor,
+	MotionSensor,
+	OpenCloseSensor,
+	
+	IOLinc
+} from 'insteon-plm';
 import { InsteonModemConfigNode } from '../../types/types';
 import { Request, Response } from 'express';
 import { validatePLMConnection } from '../../device/insteonDeviceConfig/configMethods';
@@ -56,6 +71,15 @@ export = function(RED: Red){
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => manageDevice(RED, req, res)
 	);
+	
+	
+	/* Server to handle device configuration and link changes */
+	RED.httpAdmin.post(
+		"/insteon-device-config",
+		RED.auth.needsPermission('serial.read'),
+		(req: any, res: any) => updateDeviceConfig(RED, req, res)
+	);
+	
 	
 };
 
@@ -169,19 +193,25 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 		let deviceCache = {} as any;
 		
 		if(req.body.action === 'addNewDevice'){
+			console.log("begin linkDevice");
 			result = await PLMConfigNode?.plm?.linkDevice(address);
 			messageVerb = "linked";
-			
+			console.log("end linkDevice, get device info");
 			await sleep(1000);
 			
 			/* Get device info after we've added it */
 			deviceCache.info = await PLMConfigNode.plm?.queryDeviceInfo(address);
+			console.log("end device info, begin instance");
 			
 			let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false, cache: deviceCache });
+			console.log("end device instance, begin read config");
 			
 			deviceCache.config = await device?.readConfig();
+			console.log("end read config, begin read ex config");
 			deviceCache.extendedConfig = await device?.readExtendedConfig();
+			console.log("end read exconfig, begin synclink");
 			deviceCache.links = await device?.syncLinks();
+			console.log("end synclink");
 			
 		}else if(req.body.action === 'removeDevice'){
 			/* Get device info before we remove it */
@@ -204,6 +234,80 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 			deviceCache: deviceCache,
 			configNodeType: getConfigNodeType(deviceCache.info.cat, deviceCache.info.subcat),
 			message: `Device ${deviceCache.info.description} was ${messageVerb}`
+		});
+
+	}
+	catch(e){
+		res.status(500).send({message: 'An error has occured', caught: e.message});
+	}
+}
+
+async function updateDeviceConfig(RED: Red, req: Request, res: Response){
+	try{		
+		let PLMConfigNode = validatePLMConnection(RED, req.body.plmConfigNode);
+
+		/* Validate the device address */
+		if(!Utilities.validateAddress(req.body.address)){
+			// Server side failure
+			res.status(400);
+			res.json({
+				message: "Invalid Insteon device address. Please use format `AA.BB.CC`"
+			});
+			return;
+		}
+		
+		let address = Utilities.toAddressArray(req.body.address) as Byte[];
+
+		let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false });
+		
+		/* write each of the configuration settings */
+		if(req.body.changed.indexOf("programLock") !== -1)
+			await (device as any)?.setProgramLock(req.body.programLock);
+
+		if(req.body.changed.indexOf("LEDonTX") !== -1)
+			await (device as any)?.setLEDonTX(req.body.LEDonTX);
+
+		if(req.body.changed.indexOf("loadSense") !== -1)
+			await (device as any)?.setLoadSense(req.body.loadSense);
+
+		if(req.body.changed.indexOf("LEDDisabled") !== -1)
+			await (device as any)?.setLEDDisabled(req.body.LEDDisabled);
+
+		if(req.body.changed.indexOf("resumeDim") !== -1)
+			await (device as any)?.setResumeDim(req.body.resumeDim);
+
+		if(req.body.changed.indexOf("rampRate") !== -1)
+			await (device as any)?.setRampRate(parseInt(req.body.rampRate) as Byte);
+
+		if(req.body.changed.indexOf("onLevel") !== -1)
+			await (device as any)?.setOnLevel(parseInt(req.body.onLevel) as Byte);
+		
+		/* If any links require deletion */
+		if(req.body.deletedLinks.length > 0){
+			for(let i = 0; i < req.body.deletedLinks.length; i++){
+				await device?.clearDatabaseRecord(req.body.deletedLinks[i]).catch(function(){ res.status(500).send({message: 'An error has occured', caught: "clearDatabaseRecord failed"}) });
+			}
+		}
+		
+		/* If any links require updating */
+		if(req.body.changedLinks.length > 0){
+			for(let i = 0; i < req.body.changedLinks.length; i++){
+				let link = req.body.changedLinks[i];
+				await device?.modifyDatabase(link.address, link);
+			}
+		}
+
+		let configCache = await device?.readConfig();
+
+		let extendedConfigCache = await device?.readExtendedConfig();
+		
+		let linkCache = await device?.syncLinks();
+		
+		res.json({
+			configCache: configCache,
+			extendedConfigCache: extendedConfigCache,
+			linkCache: linkCache,
+			message: `Device configuration was updated`
 		});
 
 	}
