@@ -3,10 +3,14 @@
 */
 
 /* Importing Libraries and types */
+import logger from 'debug';
+/* Configuring logging */
+const debug = logger('node-red-contrib-insteon:configMethods');
+debug.enabled = true;
+
 import { Red, NodeProperties } from 'node-red';
 import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../types/types';
 import { Byte, Packet, InsteonDevice, Utilities } from 'insteon-plm';
-
 
 /* Interfaces */
 export interface DeviceConfigNodeProps extends NodeProperties {
@@ -37,11 +41,16 @@ export function validatePLMConnection(RED: Red, configNodeId: string){
 	return PLMConfigNode;
 }
 
+/* Used by every device config node to setup the device */
 export async function setupDevice(RED: Red, node: InsteonDeviceConfigNode, config: DeviceConfigNodeProps){
+	node.ready = false;
+	
+	debug(`setupDevice ${config.address} ${config.name}: start`);
+	
 	// Creating actual node
 	RED.nodes.createNode(node, config);
 
-	// Converting config into address
+	// Converting config address string into address hex array
 	node.address = Utilities.toAddressArray(config.address) as Byte[];
 	
 	// Checking to see if we have cached data
@@ -53,7 +62,8 @@ export async function setupDevice(RED: Red, node: InsteonDeviceConfigNode, confi
 
 	// Checking if we don't have a modem
 	if(!config.modem){
-		node.emit('status', 'No modem');
+		debug(`setupDevice ${config.address} ${config.name}: no modem`);
+		node.emit('status', 'No modem',config);
 		return;
 	}
 
@@ -62,6 +72,8 @@ export async function setupDevice(RED: Red, node: InsteonDeviceConfigNode, confi
 
 	// Can't get the device if we don't have a modem
 	if(!node.PLMConfigNode || !node.PLMConfigNode.plm){
+		debug(`setupDevice ${config.address} ${config.name}: no modem config`);
+
 		node.emit('status', 'No Modem Config');
 		node.log('No modem config');
 		return;
@@ -69,17 +81,19 @@ export async function setupDevice(RED: Red, node: InsteonDeviceConfigNode, confi
 
 	// If not connected yet, wait for connection
 	if(!node.PLMConfigNode.plm.connected){
+		debug(`setupDevice ${config.address} ${config.name}: recursion? plm not connected`);
 		node.PLMConfigNode.plm.once('ready', _ => setupDevice(RED, node, config));
 		return;
 	}
 	
 	// Instanciate the device for use
-	node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: true, syncLinks: false, cache: node.cache });
+	node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: false, syncLinks: false, cache: node.cache });
 
 	// Checking we have a device
 	if(!node.device){
 		node.emit('status', 'No Device Instance');
-		node.log('No device instance');
+		node.log('setupDevice: No device instance');
+		debug(`setupDevice ${config.address} ${config.name}: No device instance`);
 		return;
 	}
 
@@ -88,6 +102,9 @@ export async function setupDevice(RED: Red, node: InsteonDeviceConfigNode, confi
 
 	// Emitting on ready
 	node.device.once('ready', _ => {
+		node.ready = true;
+		
+		debug(`setupDevice ${config.address} ${config.name}: ready`);
 		node.log('Ready');
 		node.emit('ready', 'Listening')
 	});
