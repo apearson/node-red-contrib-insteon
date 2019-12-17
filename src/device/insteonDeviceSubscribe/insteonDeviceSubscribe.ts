@@ -30,11 +30,16 @@ export = function(RED: Red){
 
 		this.status({fill: 'red', shape: 'dot', text: 'Waiting on device config'});
 
-		/* Retrieve the config node */
+		/* Retrieve the device config node */
 		this.deviceConfigNode = RED.nodes.getNode(props.device) as InsteonDeviceConfigNode;
-
-		/* Setting up PLM events */
-		this.deviceConfigNode.on('ready', p => onReady(this, p));
+		
+		/* If the device config node is already ready (meaning it's 'ready' event already fired before this subscribe node was created) */
+		if(this.deviceConfigNode.ready){
+			onReady(this,'Listening');
+		}else{
+			/* Wait and listen for the device to be ready */
+			this.deviceConfigNode.on('ready', p => onReady(this, p));		
+		}
 	});
 };
 
