@@ -24,7 +24,7 @@
 				insteon.getInsteonPorts(insteon.renderInsteonPorts, e => insteon.sendErrorToDebugConsole(node.id, e))
 			);
 
-			/* Setting up settings accordion */
+			/* Setting up accordion */
 			$('#accordion').accordion({heightStyle: 'fill'});
 
 			/* PLM links table */
@@ -64,23 +64,34 @@
 			insteon.manageDevice(node.id, address, action,
 				data => {
 					$('#add_device,#remove_device').prop('disabled', false);
-
-					alert(data.message);
 				
 					// Create the config node
 					if(data.action === 'addNewDevice'){
-						let newNode = {
-							id: RED.nodes.id(),
-							_def: RED.nodes.getType(data.configNodeType),
-							type: data.configNodeType,
-							users: [],
-							address: $('#new_device_address').val(),
-							name: $('#new_device_name').val(),
-							cache: JSON.stringify(data.deviceCache)
+						// Only create the node if it doesn't exist already
+						if(insteon.getDeviceNode(address) === null){
+							let newNode = {
+								id: RED.nodes.id(),
+								_def: RED.nodes.getType(data.configNodeType),
+								type: data.configNodeType,
+								users: [],
+								modem: node.id,
+								address: address,
+								name: $('#new_device_name').val(),
+								cache: JSON.stringify(data.deviceCache)
+							}
+							RED.nodes.add(newNode);
 						}
-						RED.nodes.add(newNode);
+
+					// Remove the config node
+					}else if(data.action === 'removeDevice'){
+						let existingNode = insteon.getDeviceNode(address);
+						if(existingNode !== null){
+							RED.nodes.remove(existingNode.id);
+						}
 					}
-				
+
+					alert(data.message);
+
 					$('#new_device_address').val('');
 					$('#new_device_name').val('');
 					insteon.renderLinksTable(data.links);
@@ -139,7 +150,7 @@
 			links.forEach(link => {
 			
 				// Get the linked device's configuration node, if there is one
-				let deviceConfigNode = insteon.getDeviceNode(link.device);
+				let deviceConfigNode = insteon.getDeviceNode(insteon.addressToString(link.device));
 
 				/* Create the table cell for the device. If the device has a config node,
 					make it a clickable link to take the user to the edit panel for the
@@ -152,20 +163,11 @@
 						href: '#',
 						html: `${insteon.addressToString(link.device)}: Add &raquo;`,
 						click: function(e){
-							alert('function disabled');
 							e.preventDefault();
-							return;
-							// Create a new config node for this device, then navigate to it
-							let newNode = {
-								id: RED.nodes.id(),
-								_def: RED.nodes.getType("insteon-device-config"),
-								type: "insteon-device-config",
-								users: [],
-								address: `${link.device[0].toString(16)}.${link.device[1].toString(16)}.${link.device[2].toString(16)}`,
-								cache: JSON.stringify({})
-							}
-							RED.nodes.add(newNode);
-							RED.editor.editConfig('', 'insteon-device-config', newNode.id);
+							// Switch to the add new device panel in the accordion
+							$("#new_device_address").val(insteon.addressToString(link.device));
+							$("#new_device_name").focus();
+							$("#accordion").accordion( "option", "active", 1);
 						}
 					}).appendTo(deviceCell);
 				}
@@ -271,10 +273,10 @@
 			let insteon = RED.nodes.getType("insteon-modem-config");
 
 			let devices = [];
-
+			
 			RED.nodes.eachConfig(c => c.type.match(/insteon.*device|modem.*config/) !== null ? devices.push(c) : null);
 			return devices.find(d =>
-				d.address.toUpperCase() === insteon.addressToString(address)
+				d.address.toUpperCase() === address.toUpperCase()
 			) || null;
 		},
 		
@@ -282,12 +284,13 @@
 		addressToString: function(address){
 			return address.map(num => num.toString(16).toUpperCase().padStart(2, '0')).join('.');
 		},
-
+		
+		/* Make sure the address was the correct format and that there is not already another node already using the address */
 		validateDeviceAddress: function(address){
-			/* Check to see if this devie address was used in another node */
+			/* Check to see if this device address was used in another node */
 			let devices = [];
-			RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : "");
-			let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === address.toLowerCase());
+			RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) ? devices.push(c) : "");
+			let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === address.toUpperCase());
 
 			if(duplicate.length > 0){
 				duplicate[0].dirty = true;
@@ -306,6 +309,27 @@
 				});
 				return true;
 			}
+		},
+		
+		/* Check to see if the device A and device B are properly linked together
+		 * If device A has a controller record for device B, device B must have a responder record for device A
+		 * If device B has a responder record for device A, device A must have a controller record for device B
+		 * deviceAddress must be a string: 'AA.BB.CC'
+		 * insteonLink must be a DeviceLinkRecord object
+		 */
+		validateForeignLink: function(address, insteonLink){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			let deviceA = address;
+			let deviceB = insteon.addressToString(insteonLink.device);
+			
+			return insteon.device.readCache(deviceB).links.filter(deviceBLink => {
+				return insteonLink.Type.control !== deviceBLink.Type.control // If this is a control record, check respond records and vice versa. 
+					&& deviceBLink.Type.active // record must be active
+					&& deviceA === insteon.addressToString(deviceBLink.device)
+					&& deviceBLink.group === insteonLink.group
+				}).length > 0;
 		},
 
 		/*
@@ -344,7 +368,7 @@
 		//#endregion
 		
 	});
-
+	
 </script>
 
 <!-- Node Configuration -->
