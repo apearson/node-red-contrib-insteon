@@ -22,7 +22,7 @@
 			let cache = insteon.device.readCache();
 			
 			/* Initalize the device config panel */
-			insteon.device.onDeviceEditPrepare(node, 'insteon-dimmable-lighting-device-config');
+			insteon.device.onDeviceEditPrepare(node);
 			
 			/* setup the checkbox states. store the initial value in data so that we may send only the changed values */
 			$("#node-config-input-program-lock").prop('checked',cache.config.programLock).data('initial',cache.config.programLock);
@@ -31,6 +31,14 @@
 			$("#node-config-input-led-disabled").prop('checked',cache.config.LEDDisabled).data('initial',cache.config.LEDDisabled);
 			$("#node-config-input-resume-dim").prop('checked',cache.config.resumeDim).data('initial',cache.config.resumeDim);
 			
+			/* Add warnings to the resume dim and load sense - we do not have detailed enough feature detection to disable these settings for devices which do not support them */
+			$("#node-config-input-load-sense,#node-config-input-resume-dim").change(function(){
+				if(this.checked){
+					let label = $(`label[for='${this.id}']`).text();
+					alert(`Not all Insteon devices support ${label}. If you enable ${label} on a device that does not support it, the device may not work correctly until you disable this feature.`);
+				}
+			});
+
 			/* Ramp rate slider */
 			let rampHandle = $("#node-config-input-ramp-rate-slider .ui-slider-handle");
 			$("#node-config-input-ramp-rate-slider").slider({
@@ -169,7 +177,7 @@
 					<th style='text-align: left;'>&nbsp;</th>
 				</tr>
 			</thead>
-			<tbody id='controlerLinks'>
+			<tbody id='controllerLinks'>
 			</tbody>
 		</table>
 		<div class="red-ui-tray-toolbar">
@@ -203,11 +211,22 @@
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="insteon-device-config">
+<script type="text/x-red" data-help-name="insteon-dimmable-lighting-device-config">	
 	<h3>Info</h3>
-	<p>Represents one physical insteon device.</p>
+	<p>Represents one physical dimmable Insteon lighting device.</p>
+	
+	<ul>
+		<li><strong>Name</strong> - Give a friendly name to your dimmable Insteon device.</li>
+		<li><strong>Address</strong> - The Insteon address for the device found on the device's sticker.</li>
+		<li><strong>Ramp Rate</strong> - When physically tapping the on or off button, this is the time that it takes for the dimmer to ramp up or down.</li>
+		<li><strong>On Level</strong> - When physically tapping the on button, this is the level at which the dimmer will turn on to.</li>
+		<li><strong>Program Lock</strong> - Disables reprogramming of the device from it's set button.</li>
+		<li><strong>Flash LED on Message Transmit</strong> - When activated, the LED on the device will flash as insteon messages are sent.</li>
+		<li><strong>Load Sense</strong> - When enabled, the Insteon device will turn on when it senses load (e.g. a lamp being turned on). This makes an ordinary lamp switch smart. <em>This feature is only available on certain devices - check your manual!</em></li>
+		<li><strong>LED Disabled</strong> - Turn off device's status LED.</li>
+		<li><strong>Resume Dim</strong> - When enabled, the Insteon device will remember the last brightness level and turn on to that level. <em>This feature is only available on certain devices - check your manual!</em></li>
+		<li><strong>Controller Links</strong> - Control these devices. e.g. When physically turning the device <em>on</em>, it will broadcast <em>on</em> commands to all devices it controls. These receiving devices must have a responder link, otherwise the messages will be ignored.</li>
+		<li><strong>Responder Links</strong> - Listen for commands from these devices. This device will respond using the <em>ramp rate</em> and <em>on level</em> of the <em>responder link</em>.</li>
+	</ul>
 
-	<p>Drag this node onto the pallet, assign it the insteon device ID and give it a name. </p>
-
-	<p>The node will keep track of the current state of the physical device.</p>
 </script>
