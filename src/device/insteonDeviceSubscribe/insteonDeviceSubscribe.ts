@@ -1,3 +1,8 @@
+import logger from 'debug';
+/* Configuring logging */
+const debug = logger('node-red-contrib-insteon:configMethods');
+debug.enabled = true;
+
 import { Red, NodeProperties } from 'node-red';
 import { Packet } from 'insteon-plm';
 import { DeviceSubscribeNode, InsteonDeviceConfigNode } from '../../types/types';
