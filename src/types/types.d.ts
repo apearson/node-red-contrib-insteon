@@ -16,6 +16,7 @@ interface InsteonDeviceConfigNode extends Node {
 	PLMConfigNode?: InsteonModemConfigNode;
 	device?: InsteonDevice;
 	cache?: any;
+	ready?: boolean;
 }
 
 interface InsteonSceneConfigNode extends Node {
