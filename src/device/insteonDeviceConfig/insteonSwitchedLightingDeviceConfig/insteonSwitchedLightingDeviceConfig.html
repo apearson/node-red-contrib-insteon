@@ -4,6 +4,7 @@
 	RED.nodes.registerType('insteon-switched-lighting-device-config',{
 		category: 'config',
 		align: 'left',
+		// defaults: RED.nodes.getType("insteon-device-config").defaults,
 		defaults: {
 			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' },
@@ -20,20 +21,27 @@
 			/* parse the cache json into an object */
 			let cache = insteon.device.readCache();
 			
-			/* Initalize the device config panel and get the cache */
-			insteon.device.onDeviceEditPrepare(node, 'insteon-switched-lighting-device-config');
+			/* Initalize the device config panel */
+			insteon.device.onDeviceEditPrepare(node);
 			
 			/* setup the checkbox states. store the initial value in data so that we may send only the changed values */
 			$("#node-config-input-program-lock").prop('checked',cache.config.programLock).data('initial',cache.config.programLock);
 			$("#node-config-input-led-on-tx").prop('checked',cache.config.LEDonTX).data('initial',cache.config.LEDonTX);
 			$("#node-config-input-load-sense").prop('checked',cache.config.loadSense).data('initial',cache.config.loadSense);
 			$("#node-config-input-led-disabled").prop('checked',cache.config.LEDDisabled).data('initial',cache.config.LEDDisabled);
+			
+			/* Add warnings to the load sense setting - we do not have detailed enough feature detection to disable these settings for devices which do not support them */
+			$("#node-config-input-load-sense").change(function(){
+				if(this.checked){
+					let label = $(`label[for='${this.id}']`).text();
+					alert(`Not all Insteon devices support ${label}. If you enable ${label} on a device that does not support it, the device may not work correctly until you disable this feature.`);
+				}
+			});
 		},
 		inputs: 0,
 		outputs: 0,
 		icon: 'light.png',
-		label: function(){ return this.name || 'Insteon Device' },
-		
+		label: function(){ return this.name || 'Insteon Device' }
 	});
 </script>
 
@@ -57,72 +65,100 @@
 		<input type="text" id="node-config-input-cache" placeholder="" disabled="true" />
 	</div>
 	
-	<div class='form-row' style='height: 300px'>
-		<div id='accordion'>
-		  <h3>Switched Device Settings</h3>
-		  <div>
-		  	<div class="red-ui-treeList-label">
-				<span class="red-ui-treeList-icon">
-					<input type="checkbox" name="programLock" id="node-config-input-program-lock" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
-				</span>
-		  		<label style="display: inline" for="node-config-input-program-lock" class="red-ui-treeList-label-text">Program Lock</label>
-			</div>
+	<div id='accordion'>
+	  <h3>Switched Lighting Device Settings</h3>
+	  <div>
 		
-		  	<div class="red-ui-treeList-label">
-				<span class="red-ui-treeList-icon">
-					<input type="checkbox" name="LEDonTX" id="node-config-input-led-on-tx" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
-				</span>
-		  		<label style="display: inline" for="node-config-input-led-on-tx" class="red-ui-treeList-label-text">Flash LED on Message Transmit</label>
-			</div>
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="programLock" id="node-config-input-program-lock" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-program-lock" class="red-ui-treeList-label-text">Program Lock</label>
+		</div>
+	
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="LEDonTX" id="node-config-input-led-on-tx" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-led-on-tx" class="red-ui-treeList-label-text">Flash LED on Message Transmit</label>
+		</div>
 
-		  	<div class="red-ui-treeList-label">
-				<span class="red-ui-treeList-icon">
-					<input type="checkbox" name="loadSense" id="node-config-input-load-sense" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
-				</span>
-		  		<label style="display: inline" for="node-config-input-load-sense" class="red-ui-treeList-label-text">Load Sense</label>
-			</div>
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="loadSense" id="node-config-input-load-sense" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-load-sense" class="red-ui-treeList-label-text">Load Sense</label>
+		</div>
 
-		  	<div class="red-ui-treeList-label">
-				<span class="red-ui-treeList-icon">
-					<input type="checkbox" name="LEDDisabled" id="node-config-input-led-disabled" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
-				</span>
-		  		<label style="display: inline" for="node-config-input-led-disabled" class="red-ui-treeList-label-text">LED Disabled</label>
-			</div>
-			
-			<div class="red-ui-tray-toolbar">
-				<button id="update-device-config" class="ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
-			</div>
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="LEDDisabled" id="node-config-input-led-disabled" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-led-disabled" class="red-ui-treeList-label-text">LED Disabled</label>
+		</div>
+				
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+		</div>		
+	  </div>
 
+	  <h3>Controller Links</h3>
+	  <div>
+		<table width='100%'>
+			<thead>
+				<tr>
+					<th style='text-align: left;'>Device</th>
+					<th style='text-align: left;'>Scene</th>
+					<th style='text-align: left;'>&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody id='controllerLinks'>
+			</tbody>
+		</table>
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+		</div>		
+	  </div>
 
-		  </div>
+	  <h3>Responder Links</h3>
+	  <div>
+		<table width='100%'>
+			<thead>
+				<tr>
+					<th style='text-align: left;'>Device</th>
+					<th style='text-align: left;'>Scene</th>
+					<th style='text-align: left;'>On Level</th>
+					<th style='text-align: left;'>Ramp Rate</th>
+					<th style='text-align: left;'>&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody id='responderLinks'>
+			</tbody>
+		</table>
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+		</div>		
+	  </div>
 
-		  <h3>Device Insteon Link Database</h3>
-		  <div>
-			<table width='100%'>
-				<thead>
-					<tr>
-						<th style='text-align: left;'>Type</th>
-						<th style='text-align: left;'>Device</th>
-						<th style='text-align: left;'>Group</th>
-						<th style='text-align: left;'>&nbsp;</th>
-					</tr>
-				</thead>
-				<tbody id='links'>
-				</tbody>
-			</table>
-		  </div>
-
-		</div> <!-- End accordion -->
-	</div>
+	</div> <!-- End accordion -->
+	
 
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="insteon-device-config">
+<script type="text/x-red" data-help-name="insteon-switched-lighting-device-config">	
 	<h3>Info</h3>
-	<p>Represents one physical insteon device.</p>
+	<p>Represents one physical switched Insteon lighting device.</p>
+	
+	<ul>
+		<li><strong>Name</strong> - Give a friendly name to your switched Insteon device.</li>
+		<li><strong>Address</strong> - The Insteon address for the device found on the device's sticker.</li>
+		<li><strong>Program Lock</strong> - Disables reprogramming of the device from it's set button.</li>
+		<li><strong>Flash LED on Message Transmit</strong> - When activated, the LED on the device will flash as insteon messages are sent.</li>
+		<li><strong>Load Sense</strong> - When enabled, the Insteon device will turn on when it senses load (e.g. a lamp being turned on). This makes an ordinary lamp switch smart. <em>This feature is only available on certain devices - check your manual!</em></li>
+		<li><strong>LED Disabled</strong> - Turn off device's status LED.</li>
+		<li><strong>Controller Links</strong> - Control these devices. e.g. When physically turning the device <em>on</em>, it will broadcast <em>on</em> commands to all devices it controls. These receiving devices must have a responder link, otherwise the messages will be ignored.</li>
+		<li><strong>Responder Links</strong> - Listen for commands from these devices. This device will respond using the <em>ramp rate</em> and <em>on level</em> of the <em>responder link</em>.</li>
+	</ul>
 
-	<p>Drag this node onto the pallet, assign it the insteon device ID and give it a name. </p>
-
-	<p>The node will keep track of the current state of the physical device.</p>
 </script>
