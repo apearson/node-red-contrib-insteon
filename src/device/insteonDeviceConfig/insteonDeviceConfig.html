@@ -12,29 +12,39 @@
 			cache: { value: '' },
 		},
 		oneditprepare: function(){
+			let node = this;
+			
+			/* import the JS functions from the modem & top level device config node */
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
-			
-			/* parse the cache json */
+
+			/* parse the cache json into an object */
 			let cache = insteon.device.readCache();
 			
-			insteon.device.renderDescription(cache);
-		
-			/* Setting up settings accordion */
-			$('#accordion').accordion({heightStyle: 'fill'});
+			/* Initalize the device config panel */
+			insteon.device.onDeviceEditPrepare(node);
 		},
 		inputs: 0,
 		outputs: 0,
 		icon: 'light.png',
 		label: function(){ return this.name || 'Insteon Device' },
 		
-		
-		readCache: function(){
-			let cache = {};
-			
+		//#region cache functions
+		readCache: function(address){
+			let cache = {info: {}, config: {}, extendedConfig: {}, links: []};
+			let cacheJSON = '';
+						
 			/* unserialize the cache */
 			try{
-				cache = JSON.parse($("#node-config-input-cache").val());
+				/* read the cache */
+				if(address !== undefined){
+					let insteon = RED.nodes.getType("insteon-modem-config");
+					cacheJSON = insteon.getDeviceNode(address).cache;
+				}else{
+					cacheJSON = $("#node-config-input-cache").val();
+				}
+				
+				cache = JSON.parse(cacheJSON);
 			}catch(e){}
 			
 			return cache;
@@ -47,14 +57,23 @@
 			$("#node-config-dialog-ok").click();
 			$("#red-ui-header-button-deploy-icon").click();			
 		},
+		//#end region
 		
+		//#region ajax config functions
 		/* 
 		 * Assemble an object containing all data needed to make an ajax request that will update a device's configuration
-		 * Compare that data with the cache data - and indicate if there was a change. The backend can skip unchanged records to save time
-		 * The data must be serialized in order for it to be properly posted by postConfig and decoded by the server
+		 * Compare that data with the cache data - and indicate if there was a change. The backend can skip unchanged records
+		 * to save time and increase reliability
+		 * The data must be JSON serialized in order for it to be properly posted by postConfig and decoded by the server
 		 */
 		serializeConfig: function(){
-			let data = {changed: []};
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			let data = {changed: [], deletedLinks: [], changedLinks: []};
+
+			/* parse the cache json into an object */
+			let cache = insteon.device.readCache($('#node-config-input-address').val());
 			
 			data.plmConfigNode = $("#node-config-input-modem").val();
 			data.address = $('#node-config-input-address').val();
@@ -75,8 +94,37 @@
 				data[$(e).prop("name")] = $(e).val();
 			});
 			
-			/* Add the links that changed */
+			/* Add the links that were deleted */
+			$('#controllerLinks,#responderLinks').find('tr.toBeDeleted input.linkAddress').each(function(i,e){
+				data.deletedLinks.push(JSON.parse($(e).val()));
+			});
 		
+			/* Add the responder links that were updated */
+			$('#responderLinks tr:not(.toBeDeleted)').each(function(i,e){
+				let changed = false;
+				
+				let inputRampRate = 31 - parseInt($(e).find('select.linkRampRate').val()); // insteon ramp rates are backward
+				let inputOnLevel = Math.round(parseInt($(e).find('select.linkOnLevel').val()) / 100 * 255); // convert 0-100 to 0-255
+				
+				// Pull the link from the cache
+				let linkData = cache.links.find(link => JSON.stringify(link.address) === $(e).find('input.linkAddress').val());
+				
+				// Compare values to see if anything was changed
+				if(linkData.rampRate !== inputRampRate){
+					changed = true;
+					linkData.rampRate = inputRampRate;
+				}
+				
+				if(linkData.onLevel !== inputOnLevel){
+					changed = true;
+					linkData.onLevel = inputOnLevel;
+				}
+				
+				if(changed){
+					data.changedLinks.push(linkData);
+				}
+			});
+
 			return JSON.stringify(data);
 		},
 		
@@ -92,14 +140,27 @@
 			});
 		},
 		
+		//#end region
+		
 		//#region 
 
 		rampRates: ["0.1 sec","0.2 sec","0.3 sec","0.5 sec","2.0 sec","4.5 sec","6.5 sec","8.5 sec","19 sec","21.5 sec","23.5 sec","26 sec","28 sec","30 sec","32 sec","34 sec","38.5 sec","43 sec","47 sec","1 min","1.5 min","2 min","2.5 min","3 min","3.5 min","4 min","4.5 min","5 min","6 min","7 min","8 min","9 min"],
-
-		//#endregion
 		
-		//#region render device config functions
-		onDeviceEditPrepare: function(node, url){
+		/* Utility that determins if a device is dimmable by reading its cache.
+		 * If the device is in category 0x01, then it is dimmable. All others are not
+		 */
+		isDimmable(address){
+			let cache = RED.nodes.getType("insteon-device-config").readCache(address);
+			if(cache !== null){
+				return parseInt(cache.info.cat,16) === 1;
+			}
+			return false;
+		},
+		
+		//#end region
+		
+		//#region render device config UI functions
+		onDeviceEditPrepare: function(node){
 			/* import the JS functions from the modem & top level device config node */
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
@@ -119,7 +180,7 @@
 				$('.update-device-config').prop('disabled', true);
 			
 				insteon.device.postConfig({
-					url: url,
+					url: 'insteon-device-config',
 					data: insteon.device.serializeConfig(),
 					success: data => {
 						$('.update-device-config').removeClass('disabled');
@@ -127,6 +188,8 @@
 					
 						cache.config = data.configCache;
 						cache.extendedConfig = data.extendedConfigCache;
+						cache.links = data.linkCache;
+						
 						insteon.device.writeCache(cache);
 					},
 					error: e => {
@@ -155,19 +218,16 @@
 			RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) !== null ? devices.push(c) : '');
 
 			// Clearing links and address elements
-			$('#controlerLinks, #responderLinks').empty();
+			$('#controllerLinks, #responderLinks').empty();
 
-			// Sorting links by group
-			links = links.sort((a, b) => a.type > b.type ? 1 : a.group > b.group ? 1 : b.group > a.group ? -1 : 0);
-
-			// For each link in PLM render a device row
-			links.forEach(link => {
-				if(link.Type.highWater){
-					return; // Dont bother rendering the highwater link
+			// For each active link in PLM render a device row
+			links.filter(e => e.Type.active).forEach(link => {
+				if(JSON.stringify(link.device) === '[0,0,0]'){
+					return; // Dont bother rendering the highwater link, or any link with a 0,0,0 device
 				}
 			
 				// Get the linked device's configuration node, if there is one
-				let deviceConfigNode = insteon.getDeviceNode(link.device);
+				let deviceConfigNode = insteon.getDeviceNode(insteon.addressToString(link.device));
 
 				/* Create the table cell for the device. If the device has a config node,
 					make it a clickable link to take the user to the edit panel for the
@@ -176,14 +236,16 @@
 				let deviceCell = $('<td>', { style:'white-space:nowrap' } );
 
 				if(deviceConfigNode === null){
+					deviceCell.addClass('unknownDevice');
+					
 					$('<span/>')
 						.text(`${insteon.addressToString(link.device)}`)
 						.appendTo(deviceCell);
 				}
-				else{
+				else{					
 					$('<a>', {
 						href: '#',
-						html: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`,
+						text: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`,
 						click: function(e){
 							e.preventDefault();
 							RED.editor.editConfig('', deviceConfigNode.type, deviceConfigNode.id);
@@ -196,7 +258,7 @@
 					const row = insteon.device.renderControllerLinkRow(link, deviceCell);
 
 					// Appending device row to links table
-					row.appendTo($('#controlerLinks'));
+					row.appendTo($('#controllerLinks'));
 				}else{
 					const row = insteon.device.renderResponderLinkRow(link, deviceCell);
 					
@@ -211,6 +273,7 @@
 		renderControllerLinkRow: function(link, deviceCell){
 			/* import the JS functions from the modem & top level device config node */
 			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
 
 			// Table row
 			let row = $('<tr/>');
@@ -227,8 +290,16 @@
 				.appendTo(row);
 
 			// Action buttons
-			let actionCell = $('<td>', { style: css });
-			$('<input>',{type: 'hidden', class: 'linkAddress', value: link.address}).appendTo(actionCell);
+			let actionCell = $('<td>', { style: `text-align: right; ${css}` });
+		
+			// Hidden field to save the link address for ajax requests
+			$('<input>',{type: 'hidden', class: 'linkAddress', value: JSON.stringify(link.address)}).appendTo(actionCell);
+		
+			// Warning to indicate the foreign link is not defined
+			if(!insteon.validateForeignLink($('#node-config-input-address').val(), link))
+				insteon.device.renderWarningButton($('#node-config-input-address').val(), insteon.addressToString(link.device), link.Type.control).appendTo(actionCell);
+		
+			// Delete link toggle button
 			insteon.device.renderLinkDeleteButton(activeCss,deletedCss).appendTo(actionCell);
 
 			actionCell.appendTo(row);
@@ -237,9 +308,14 @@
 			return row;
 		},
 		
+		/* render a responder row for renderLinksTable
+		 */
 		renderResponderLinkRow: function(link, deviceCell){
 			/* import the JS functions from the modem & top level device config node */
 			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			let isDimmable = insteon.device.isDimmable($('#node-config-input-address').val());
 
 			// Table row
 			let row = $('<tr/>');
@@ -261,18 +337,24 @@
 				.appendTo(row);
 			
 			let onLevelSelect = $('<select>', {class: 'linkOnLevel', style: 'width: 5em'}).appendTo(onLevelCell);
-			for(var i = 0; i<=100; i++){
-				$('<option>',{
-					value: i,
-					selected: i === Math.round(link.onLevel / 255 * 100)
-				}).text(`${i}%`).appendTo(onLevelSelect);
+
+			if(isDimmable){
+				for(var i = 0; i<=100; i++){
+					$('<option>',{
+						value: i,
+						selected: i === Math.round(link.onLevel / 255 * 100)
+					}).text(`${i}%`).appendTo(onLevelSelect);
+				}				
+			}else{
+				$('<option>',{ value: 0, selected: link.onLevel === 0}).text("Off").appendTo(onLevelSelect);
+				$('<option>',{ value: 100, selected: link.onLevel !== 0}).text("On").appendTo(onLevelSelect);
 			}
 
 			// Ramp Rate Column
 			let rampCell = $('<td>', { style: css })
 				.appendTo(row);
 				
-			let rampSelect = $('<select>', {class: 'linkRampRate', style: 'width: 6.5em'}).appendTo(rampCell);
+			let rampSelect = $('<select>', {class: 'linkRampRate', style: 'width: 6.5em', disabled: !isDimmable}).appendTo(rampCell);
 			insteon.device.rampRates.forEach((e,i) => {
 				$('<option>', {
 					value: i,
@@ -280,11 +362,17 @@
 				}).text(e).appendTo(rampSelect);
 			});
 			
-				
-
 			// Action buttons
-			let actionCell = $('<td>', { style: css });
-			$('<input>',{type: 'hidden', class: 'linkAddress', value: link.address}).appendTo(actionCell);
+			let actionCell = $('<td>', { style: `text-align: right; ${css}` });
+			
+			// Hidden field to save the link address for ajax requests
+			$('<input>',{type: 'hidden', class: 'linkAddress', value: JSON.stringify(link.address)}).appendTo(actionCell);
+			
+			// Warning to indicate the foreign link is not defined
+			if(!insteon.validateForeignLink($('#node-config-input-address').val(), link))
+				insteon.device.renderWarningButton($('#node-config-input-address').val(), insteon.addressToString(link.device), link.Type.control).appendTo(actionCell);
+			
+			// Delete link toggle button
 			insteon.device.renderLinkDeleteButton(activeCss,deletedCss).appendTo(actionCell);
 
 			actionCell.appendTo(row);
@@ -293,6 +381,7 @@
 			return row;
 		},
 		
+		/* render the delete button that sits in each link row */
 		renderLinkDeleteButton: function(activeCss,deletedCss){
 			let button = $('<button>',{
 				class: 'btn delete',
@@ -308,6 +397,9 @@
 						tr.find('td').each(function(i,td){							
 							td.style = activeCss;
 						});
+
+						// The last cell style is aligned right
+						tr.find('td').last().css('text-align','right')
 					}else if(confirm('Flag link for deletion?')){
 						// Flag for deletion
 						tr.addClass('toBeDeleted');
@@ -316,12 +408,53 @@
 						tr.find('td').each(function(i,td){
 							td.style = deletedCss;
 						});
+						
+						// The last cell style is aligned right
+						tr.find('td').last().css('text-align','right');
 					}
 				}
-			}).text("×");
+			}).html("&times;");
 			
 			return button;
-		}
+		},
+		
+		/* render the warning button that may sit on a link row if the link is missing it's foreign link couter part
+		 * "&#x26a0;" is emoji warning icon
+		 */
+		renderWarningButton: function(deviceA,deviceB,control){
+			/* import the JS functions from the modem & top level device config node */
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+
+			let type1 = control ? 'controller' : 'responder';
+			let type2 = control ? 'responder' : 'controller';			
+			let alertMessage = '';
+			let color = 'red';
+			
+			if(insteon.getDeviceNode(deviceB) === null){
+				color = 'orange';
+				alertMessage = `${deviceB} is not configured in Node-RED.`;
+			}else if(insteon.getDeviceNode(deviceB).type === 'insteon-modem-config'){
+				return $(""); // Don't return a button for modem records. The modem doesn't have a cache, so we can't quickly read the links from the NR editor.
+			}else{
+				let deviceBName = `${deviceB}: ${insteon.getDeviceNode(deviceB).name}`;
+				let deviceAName = `${deviceA}: ${insteon.getDeviceNode(deviceA).name}`;
+
+				alertMessage = `${deviceAName} is a ${type1} of ${deviceBName}, however ${deviceBName} does not have a ${type2} record for ${deviceAName}.
+
+You should delete this record, or add a ${type2} record to ${deviceBName}`;
+			}
+
+			let button = $('<button>',{
+				class: 'btn',
+				style: `color: ${color}`,
+				click: function(e){
+					alert(alertMessage);
+				}
+			}).html("&#x26a0;")
+			
+			return button;
+		},
 		
 		//#region
 		
@@ -356,8 +489,5 @@
 <script type="text/x-red" data-help-name="insteon-device-config">
 	<h3>Info</h3>
 	<p>Represents one physical insteon device.</p>
-
-	<p>Drag this node onto the pallet, assign it the insteon device ID and give it a name. </p>
-
-	<p>The node will keep track of the current state of the physical device.</p>
+	<p>This device type is unknown, so a generic insteon device configuration is shown.</p>
 </script>
