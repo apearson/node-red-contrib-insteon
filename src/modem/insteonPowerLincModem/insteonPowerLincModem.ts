@@ -1,3 +1,8 @@
+import logger from 'debug';
+/* Configuring logging */
+const debug = logger('node-red-contrib-insteon:insteonPowerLincModem');
+debug.enabled = true;
+
 /* Importing types */
 import { Red, NodeProperties } from 'node-red';
 import { ModemNode, InsteonModemConfigNode } from '../../types/types';
@@ -196,15 +201,18 @@ async function close(msg: any, plm: PLM){
 }
 
 async function sendCommand(msg: any, plm: PLM){
+	debug(msg);
+	
 	/* Getting info from modem */
-	msg.payload = await plm.sendStandardCommand(msg.device, msg.flags, msg.payload[0], msg.payload[1]);
+	msg.payload = await plm.sendStandardCommand(msg.device, msg.payload[0], msg.payload[2], msg.flags);
+	
 
 	/* Returning info */
 	return msg;
 }
 async function sendExtendedCommand(msg: any, plm: PLM){
 	/* Getting info from modem */
-	msg.payload = await plm.sendExtendedCommand(msg.device, msg.flags, msg.payload[0], msg.payload[1], msg.data);
+	msg.payload = await plm.sendExtendedCommand(msg.device, msg.payload[0], msg.payload[1], msg.data, msg.flags);
 
 	/* Returning info */
 	return msg;
