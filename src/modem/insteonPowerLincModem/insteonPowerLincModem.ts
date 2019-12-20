@@ -201,12 +201,9 @@ async function close(msg: any, plm: PLM){
 }
 
 async function sendCommand(msg: any, plm: PLM){
-	debug(msg);
-	
 	/* Getting info from modem */
-	msg.payload = await plm.sendStandardCommand(msg.device, msg.payload[0], msg.payload[2], msg.flags);
+	msg.payload = await plm.sendStandardCommand(msg.device, msg.payload[0], msg.payload[1], msg.flags);
 	
-
 	/* Returning info */
 	return msg;
 }
