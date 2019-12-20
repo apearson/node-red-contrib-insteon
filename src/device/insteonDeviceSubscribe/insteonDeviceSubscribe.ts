@@ -1,6 +1,6 @@
 import logger from 'debug';
 /* Configuring logging */
-const debug = logger('node-red-contrib-insteon:configMethods');
+const debug = logger('node-red-contrib-insteon:insteonDeviceSubscribe');
 debug.enabled = true;
 
 import { Red, NodeProperties } from 'node-red';
@@ -38,6 +38,15 @@ export = function(RED: Red){
 		/* Retrieve the device config node */
 		this.deviceConfigNode = RED.nodes.getNode(props.device) as InsteonDeviceConfigNode;
 		
+		/* All, Physical or Remote commands */
+		this.subtype = props.subtype;
+
+		/* Which events to fire on */
+		this.selectedEvents = props.selectedEvents;
+		
+		debug(`subtype: ${this.subtype}`);
+		debug(`selected Events ${this.selectedEvents}`);
+		
 		/* If the device config node is already ready (meaning it's 'ready' event already fired before this subscribe node was created) */
 		if(this.deviceConfigNode.ready){
 			onReady(this,'Listening');
@@ -45,6 +54,7 @@ export = function(RED: Red){
 			/* Wait and listen for the device to be ready */
 			this.deviceConfigNode.on('ready', p => onReady(this, p));		
 		}
+		
 	});
 };
 
@@ -55,102 +65,47 @@ function onReady(node: DeviceSubscribeNode, text: string){
 
 	node.status({ fill: 'green', shape: 'dot', text });
 
-	node.send({ topic: 'ready', payload: text });
+	/* this node shouldn't output anything unless the user selected it from the GUI. Maybe add a 'ready' checkbox to the GUI? But what purpose would it serve... */
+	// node.send({ topic: 'ready', payload: text });
 
-	// Adding event listeners
-	node.deviceConfigNode?.device?.on(['packet', '**'], function (this: any, p){ onPacket(node, this.event, p) });
+	// Adding event listener
+	node.deviceConfigNode?.device?.on(['**'], onPacket);
 
-	// Device events
-	node.deviceConfigNode?.device?.on(['switch', '**'], function (this: any, p){ onSwitch(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['dim', '**' ], function (this: any, p){ onDim(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['sensor', '**' ], function (this: any, p){ onSensor(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['heartbeat', '**' ], function (this: any, p){ onHeartbeat(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['battery', '**' ], function (this: any, p){ onBattery(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['motion', '**' ], function (this: any, p){ onMotion(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['light', '**' ], function (this: any, p){ onLight(node, this.event, p) });
-}
-
-function onPacket(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
-	node.send({topic: 'packet', payload: packet});
-}
-
-function onSwitch(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
-	node.send({
-		topic: event[0],
-		payload: {
-			status: event[1],
-			type: event[2],
-		},
-		event,
-		packet,
+	// remove the event when the node is closed
+	node.on('close', function(removed: boolean, done: () => void){
+		// Remove event listeners
+		node.deviceConfigNode?.device?.removeListener(['**'], onPacket);
+		debug(`onClose removed listeners`);
+		done();
 	});
-}
 
-function onDim(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
-	node.send({
-		topic: event[0],
-		payload: {
-			status: event[1],
-		},
-		event,
-		packet,
-	});
-}
+	function onPacket(this: any, packet: Packet.Packet){
+		const event = this.event;
+		const type = this.event.pop(); // The remote/physical type is always the last part of the event
+		
+		/* Determine whether to send based on if the event type (all/physical/remote) matches what the user subscribed to */
+		if(node.subtype !== "" && node.subtype !== type) return;
+		
+		/* now filter based on the specific event types that were selected by the user
+		 * the GUI has switched.on.fast, so we join the event array by dots and compare the strings
+		 */
+		
+		if(node.selectedEvents.filter((e: any) => e.event === event.join('.')).length === 1){
+			event.push(type); // put the type back on the event array
+			node.send({
+				topic: event[0],
+				payload: {
+					status: 'to be determined',
+					type: type,
+				},
+				event,
+				packet,
+			});
+		}else{
+			debug('filter did not match', event.join('.'));
+		}
 
-function onSensor(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
-	node.send({
-		topic: event[0],
-		payload: {
-			status: event[1],
-		},
-		event,
-		packet,
-	})
+	}
 }
-
-function onHeartbeat(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
-	node.send({
-		topic: event[0],
-		payload: {
-			status: event[1],
-		},
-		event,
-		packet,
-	})
-}
-
-function onBattery(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
-	node.send({
-		topic: event[0],
-		payload: {
-			status: event[1],
-		},
-		event,
-		packet,
-	})
-}
-
-function onMotion(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
-	node.send({
-		topic: event[0],
-		payload: {
-			status: event[1],
-		},
-		event,
-		packet,
-	})
-}
-
-function onLight(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
-	node.send({
-		topic: event[0],
-		payload: {
-			status: event[1],
-		},
-		event,
-		packet,
-	})
-}
-
 
 //#endregion
