@@ -34,6 +34,8 @@ interface ModemNode extends Node {
 
 interface DeviceSubscribeNode extends Node {
 	deviceConfigNode?: InsteonDeviceConfigNode;
+	selectedEvents: string[];
+	subtype: string;
 }
 
 interface DeviceCommandNode extends Node {
