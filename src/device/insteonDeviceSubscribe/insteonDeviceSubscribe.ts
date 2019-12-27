@@ -1,13 +1,13 @@
 import logger from 'debug';
 /* Configuring logging */
 const debug = logger('node-red-contrib-insteon:insteonDeviceSubscribe');
-debug.enabled = true;
+debug.enabled = false;
 
 import { Red, NodeProperties } from 'node-red';
 import { Packet } from 'insteon-plm';
 import { DeviceSubscribeNode, InsteonDeviceConfigNode } from '../../types/types';
 
-interface SubscribeConfigNodeProps extends NodeProperties {
+interface DeviceSubscribeNodeProps extends NodeProperties {
 	device: string;
 	selectedEvents: string[];
 	subtype: string;
@@ -17,7 +17,7 @@ interface SubscribeConfigNodeProps extends NodeProperties {
 export = function(RED: Red){
 	/* Fired on every deploy */
 	/* Registering node type and a constructor */
-	RED.nodes.registerType('insteon-device-subscribe', function(this: DeviceSubscribeNode, props: SubscribeConfigNodeProps){
+	RED.nodes.registerType('insteon-device-subscribe', function(this: DeviceSubscribeNode, props: DeviceSubscribeNodeProps){
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
 
@@ -35,17 +35,14 @@ export = function(RED: Red){
 
 		this.status({fill: 'red', shape: 'dot', text: 'Waiting on device config'});
 
-		/* Retrieve the device config node */
-		this.deviceConfigNode = RED.nodes.getNode(props.device) as InsteonDeviceConfigNode;
-		
 		/* All, Physical or Remote commands */
 		this.subtype = props.subtype;
 
 		/* Which events to fire on */
 		this.selectedEvents = props.selectedEvents;
-		
-		debug(`subtype: ${this.subtype}`);
-		debug(`selected Events ${this.selectedEvents}`);
+
+		/* Retrieve the device config node */
+		this.deviceConfigNode = RED.nodes.getNode(props.device) as InsteonDeviceConfigNode;
 		
 		/* If the device config node is already ready (meaning it's 'ready' event already fired before this subscribe node was created) */
 		if(this.deviceConfigNode.ready){
@@ -101,10 +98,7 @@ function onReady(node: DeviceSubscribeNode, text: string){
 				event,
 				packet,
 			});
-		}else{
-			debug('filter did not match', event.join('.'));
 		}
-
 	}
 }
 
