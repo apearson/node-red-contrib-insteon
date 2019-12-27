@@ -8,14 +8,67 @@
 		color: '#2e88c5',
 		align: 'right',
 		defaults: {
-			device: { value:'', type:'insteon-device-config' },
+			device: { value: '', required: true },
 			name: { value: '' },
+			command: { value: '' },
+			onLevel: { value: '' }
 		},
 		inputs: 1,
 		outputs: 0,
 		icon: 'bridge.png',
 		label: function(){ return this.name || RED.nodes.node(this.device) !== null ? `${RED.nodes.node(this.device).name} Out` : 'Device Out' },
 		paletteLabel: 'Device Out',
+		oneditprepare: function(){			
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			/* Setup the device list and change the UI depending on which type of device is selected */
+			insteon.buildDeviceSelectOptions('node-input-device',this.device);
+			$("#node-input-device").on('change', function(){ RED.nodes.getType("insteon-device-command").updateAvailableCommands($(this).val(), $("#node-input-command").val()); });
+			
+			/* Setup the on change event for the command */
+			$("#node-input-command").on('change', function(){ $("#node-input-device").change(); });
+			
+			/* Build the on level options */
+			$("#node-input-onLevel").hide();
+			for(var i = 100; i>=1; i--){
+				$("<option>", { value: i, text: `${i}%` }).appendTo($("#node-input-onLevel"));
+			}
+			$("#node-input-onLevel").val(this.onLevel);
+		},
+		oneditsave: function(){
+			$("#node-input-onLevel:hidden").val(100); // If the onLevel input is hidden, set the value to 100 as it will may still be passed to non dimmer devices
+		},
+		updateAvailableCommands: function(deviceNodeId, selectedCommand){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			/* In order to determine which events are relevant to the device, we lookup the device category & subcategory from it's config node's cache. */			
+			let deviceConfig = RED.nodes.node(deviceNodeId);
+			
+			if(deviceConfig !== null){
+				let cache = insteon.device.readCache(deviceConfig.address);
+				
+				/* The selected value gets changed when options are dynamically added, so save the current value */
+				let value = $("#node-input-command").val();
+				
+				/* If the device is dimmable, put the dimmer options in the list. otherwise hide them in the disabled options select */
+				if(cache.info.cat === "0x01"){
+					$("#node-input-command,#disabled-options").find("option.dimmer").appendTo($("#node-input-command"));
+					
+					/* on level only applies to dimmer devices and if the selected command is `on` */
+					['on','instant','dim-to-at-rate'].indexOf(selectedCommand) !== -1 ?  $("#node-input-onLevel").show() : $("#node-input-onLevel").hide();
+
+				}else{
+					$("#node-input-command,#disabled-options").find("option.dimmer").appendTo($("#disabled-options"));
+					$("#node-input-onLevel").hide();
+				}
+				
+				/* Restore the value after the options were changed */
+				$("#node-input-command").val(value);
+				
+			}
+		}
 	});
 
 	//#endregion
@@ -26,16 +79,57 @@
 <script type="text/x-red" data-template-name="insteon-device-command">
 	<div class="form-row">
 		<label for="node-input-device">Insteon Device</label>
-		<input type="text" id="node-input-device" placeholder="xyz">
+		<select id="node-input-device"><option value=""></option></select>
 	</div>
 	<div class="form-row">
 		<label for="node-input-name"><i class="icon-tag"></i> Name</label>
 		<input type="text" id="node-input-name" placeholder="Name">
+	</div>
+	<div class="form-row">
+		<label for="node-input-command"><i class="icon-tag"></i> Command</label>
+		<select id="node-input-command">
+			<option value="">Use msg.payload</option>
+			<!-- <option value="query">Query Current Status</option> Command node has no output, so this can't be used -->
+			<option value="on">On</option>
+			<option value="off">Off</option>
+			<option value="on-fast">Fast On</option>
+			<option value="off-fast">Fast Off</option>
+			<option class="dimmer" value="instant">Instantly Change To</option>
+			<option class="dimmer" value="dim-step-up">Brighten One Step</option>
+			<option class="dimmer" value="dim-step-down">Dim One Step</option>
+			<option class="dimmer" value="dim-continuous-up">Begin Brightening</option>
+			<option class="dimmer" value="dim-continuous-down">Begin Dimming</option>
+			<option class="dimmer" value="dim-continuous-stop">Stop Changing</option>
+			<!-- <option class="dimmer" value="dim-to-at-rate">Go To Level at Ramp Rate</option> NOT working at the moment --> 
+		</select>
+		<select id="disabled-options" style="display: none"></select>
+		
+		<select id="node-input-onLevel" style="width: 5em"></select>
 	</div>
 </script>
 
 <!-- Help Panel -->
 <script type="text/x-red" data-help-name="insteon-device-command">
 	<h3>Info</h3>
-	<p>Send commands to an insteon device.</p>
+	<p>Send commands to an Insteon device.</p>
+	
+	<p>Choose a command to send, or pass the command in msg.payload</p>
+	
+	<p>For dimmable devices, you may send send an optional brightness <code>msg.level</code> with an <code>on</code> command. Level must be an <code>integer</code> from <code>0</code> to <code>100</code>. If no level is provided, <code>100</code> is used as the default value.</p>
+			
+	<p>Valid commands for <code>msg.payload</code>:
+	<ul>
+		<!-- <li><code>query</code> - get the device's current on level back in <code>msg.payload</code></li> -->
+		<li><code>on</code> - Turns the device on</li>
+		<li><code>off</code> - Turns the device off</li>
+		<li><code>on-fast</code> - Turn on to full brightness, ignoring the device's ramp rate. Non dimming devices also respond to fast on commands</li>
+		<li><code>off-fast</code> - Turn off, ignoring the device's ramp rate</li>
+		<li><code>instant</code> - Go to provided level instantly</li>
+		<li><code>dim-step-up</code> - Increase the brightness level by one step (approximately 3%)</li>
+		<li><code>dim-step-down</code> - Decrease the brightness level by one step</li>
+		<li><code>dim-continuous-up</code> - Begin brightening until a stop command is sent</li>
+		<li><code>dim-continuous-down</code> - Begin dimming until a stop command is sent</li>
+		<li><code>dim-continuous-stop</code> - Stop brightening or dimming</li>
+	</ul>
+	</p>
 </script>

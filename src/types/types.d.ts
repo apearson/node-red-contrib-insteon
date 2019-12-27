@@ -40,6 +40,9 @@ interface DeviceSubscribeNode extends Node {
 
 interface DeviceCommandNode extends Node {
 	deviceConfigNode?: InsteonDeviceConfigNode;
+	command: string;
+	onLevel: Byte;
+	onRamp: Byte;
 }
 
 interface SceneSubscribeNode extends Node {
