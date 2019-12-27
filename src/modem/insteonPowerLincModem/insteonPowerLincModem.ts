@@ -1,7 +1,7 @@
 import logger from 'debug';
 /* Configuring logging */
 const debug = logger('node-red-contrib-insteon:insteonPowerLincModem');
-debug.enabled = true;
+debug.enabled = false;
 
 /* Importing types */
 import { Red, NodeProperties } from 'node-red';
@@ -46,7 +46,7 @@ export = function(RED: Red){
 			? this.status({fill: 'green', shape: 'dot', text: 'Connected'})
 			: this.status({fill: 'red', shape: 'dot', text: 'Disconnected'});
 
-		// On input pass the messag
+		// On input pass the message
 		this.on('input', (msg) => onInput(msg, this));
 	});
 };
@@ -120,6 +120,8 @@ async function onInput(msg: any, node: ModemNode){
 
 		/* logging out to console */
 		node.error('Error processing', error);
+		
+		debug(error);
 	}
 
 	/* Sending result */
