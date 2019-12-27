@@ -14,7 +14,7 @@ import PLM, {
 	MotionSensor,
 	OpenCloseSensor,
 	
-	IOLinc
+	IOLinc,
 } from 'insteon-plm';
 import { InsteonModemConfigNode } from '../../types/types';
 import { Request, Response } from 'express';
@@ -193,34 +193,47 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 		let deviceCache = {} as any;
 		
 		if(req.body.action === 'addNewDevice'){
-			console.log("begin linkDevice");
-			result = await PLMConfigNode?.plm?.linkDevice(address);
-			messageVerb = "linked";
-			console.log("end linkDevice, get device info");
+			try{
+				result = await PLMConfigNode?.plm?.linkDevice(address);
+				messageVerb = "linked";
+			}catch(e){
+				res.status(500).send({message: "Failed to link device", caught: e.message});
+				return;
+			}
+
 			await sleep(1000);
 			
-			/* Get device info after we've added it */
-			deviceCache.info = await PLMConfigNode.plm?.queryDeviceInfo(address);
-			console.log("end device info, begin instance");
+			try{
+				/* Get device info after we've added it */
+				deviceCache.info = await PLMConfigNode.plm?.queryDeviceInfo(address);
+			}catch(e){
+				res.status(500).send({message: "Failed to get device info", caught: e.message});
+				return;
+			}
 			
 			let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false, cache: deviceCache });
-			console.log("end device instance, begin read config");
 			
 			deviceCache.config = await device?.readConfig();
-			console.log("end read config, begin read ex config");
+
 			deviceCache.extendedConfig = await device?.readExtendedConfig();
-			console.log("end read exconfig, begin synclink");
+
 			deviceCache.links = await device?.syncLinks();
-			console.log("end synclink");
 			
 		}else if(req.body.action === 'removeDevice'){
-			/* Get device info before we remove it */
-			deviceCache.info = await PLMConfigNode.plm!.queryDeviceInfo(address);
+			try{
+				/* Get device info before we remove it */
+				deviceCache.info = await PLMConfigNode.plm!.queryDeviceInfo(address);
+			}catch(e){ /* don't do anything, if the device is broken we should still try and unlink it */ }
 			
 			await sleep(1000);
 			
-			result = await PLMConfigNode?.plm?.unlinkDevice(address);
-			messageVerb = "unlinked";
+			try{
+				result = await PLMConfigNode?.plm?.unlinkDevice(address);
+				messageVerb = "unlinked";			
+			}catch(e){
+				res.status(500).send({message: "Failed to unlink device", caught: e.message});
+				return;
+			}
 		}else{
 			throw new Error("Invalid action");
 		}
@@ -238,7 +251,7 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 
 	}
 	catch(e){
-		res.status(500).send({message: 'An error has occured', caught: e.message});
+		res.status(500).send({message: 'A linking error has occured.', caught: e.message});
 	}
 }
 
