@@ -227,7 +227,7 @@
 				}
 			
 				// Get the linked device's configuration node, if there is one
-				let deviceConfigNode = insteon.getDeviceNode(insteon.addressToString(link.device));
+				let deviceConfigNode = insteon.getDeviceNode(insteon.toAddressString(link.device));
 
 				/* Create the table cell for the device. If the device has a config node,
 					make it a clickable link to take the user to the edit panel for the
@@ -239,13 +239,13 @@
 					deviceCell.addClass('unknownDevice');
 					
 					$('<span/>')
-						.text(`${insteon.addressToString(link.device)}`)
+						.text(`${insteon.toAddressString(link.device)}`)
 						.appendTo(deviceCell);
 				}
 				else{					
 					$('<a>', {
 						href: '#',
-						text: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`,
+						text: `${insteon.toAddressString(link.device)}: ${deviceConfigNode.name}`,
 						click: function(e){
 							e.preventDefault();
 							RED.editor.editConfig('', deviceConfigNode.type, deviceConfigNode.id);
@@ -297,7 +297,7 @@
 		
 			// Warning to indicate the foreign link is not defined
 			if(!insteon.validateForeignLink($('#node-config-input-address').val(), link))
-				insteon.device.renderWarningButton($('#node-config-input-address').val(), insteon.addressToString(link.device), link.Type.control).appendTo(actionCell);
+				insteon.device.renderWarningButton($('#node-config-input-address').val(), insteon.toAddressString(link.device), link.Type.control).appendTo(actionCell);
 		
 			// Delete link toggle button
 			insteon.device.renderLinkDeleteButton(activeCss,deletedCss).appendTo(actionCell);
@@ -370,7 +370,7 @@
 			
 			// Warning to indicate the foreign link is not defined
 			if(!insteon.validateForeignLink($('#node-config-input-address').val(), link))
-				insteon.device.renderWarningButton($('#node-config-input-address').val(), insteon.addressToString(link.device), link.Type.control).appendTo(actionCell);
+				insteon.device.renderWarningButton($('#node-config-input-address').val(), insteon.toAddressString(link.device), link.Type.control).appendTo(actionCell);
 			
 			// Delete link toggle button
 			insteon.device.renderLinkDeleteButton(activeCss,deletedCss).appendTo(actionCell);

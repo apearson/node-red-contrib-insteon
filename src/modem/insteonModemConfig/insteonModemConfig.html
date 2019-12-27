@@ -150,7 +150,7 @@
 			links.forEach(link => {
 			
 				// Get the linked device's configuration node, if there is one
-				let deviceConfigNode = insteon.getDeviceNode(insteon.addressToString(link.device));
+				let deviceConfigNode = insteon.getDeviceNode(insteon.toAddressString(link.device));
 
 				/* Create the table cell for the device. If the device has a config node,
 					make it a clickable link to take the user to the edit panel for the
@@ -161,11 +161,11 @@
 				if(deviceConfigNode === null){
 					$('<a>', {
 						href: '#',
-						html: `${insteon.addressToString(link.device)}: Add &raquo;`,
+						html: `${insteon.toAddressString(link.device)}: Add &raquo;`,
 						click: function(e){
 							e.preventDefault();
 							// Switch to the add new device panel in the accordion
-							$("#new_device_address").val(insteon.addressToString(link.device));
+							$("#new_device_address").val(insteon.toAddressString(link.device));
 							$("#new_device_name").focus();
 							$("#accordion").accordion( "option", "active", 1);
 						}
@@ -174,7 +174,7 @@
 				else{
 					$('<a>', {
 						href: '#',
-						html: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`,
+						html: `${insteon.toAddressString(link.device)}: ${deviceConfigNode.name}`,
 						click: function(e){
 							e.preventDefault();
 							RED.editor.editConfig('', deviceConfigNode.type, deviceConfigNode.id);
@@ -189,12 +189,12 @@
 				row.appendTo($('#links'));
 
 				// Option text will be device id or device name
-				let optionText = deviceConfigNode === null ? insteon.addressToString(link.device)
-				                                           : `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`;
+				let optionText = deviceConfigNode === null ? insteon.toAddressString(link.device)
+				                                           : `${insteon.toAddressString(link.device)}: ${deviceConfigNode.name}`;
 
 				// Populate the select options in the remove device drop down with option text
 				$('<option/>', {
-					value: `${insteon.addressToString(link.device)}`,
+					value: `${insteon.toAddressString(link.device)}`,
 					html: optionText
 				}).appendTo($('#device_address_to_remove'));
 
@@ -281,7 +281,7 @@
 		},
 		
 		/* Make a hex string for a Byte array */
-		addressToString: function(address){
+		toAddressString: function(address){
 			return address.map(num => num.toString(16).toUpperCase().padStart(2, '0')).join('.');
 		},
 		
@@ -322,12 +322,12 @@
 			insteon.device = RED.nodes.getType("insteon-device-config");
 			
 			let deviceA = address;
-			let deviceB = insteon.addressToString(insteonLink.device);
+			let deviceB = insteon.toAddressString(insteonLink.device);
 			
 			return insteon.device.readCache(deviceB).links.filter(deviceBLink => {
 				return insteonLink.Type.control !== deviceBLink.Type.control // If this is a control record, check respond records and vice versa. 
 					&& deviceBLink.Type.active // record must be active
-					&& deviceA === insteon.addressToString(deviceBLink.device)
+					&& deviceA === insteon.toAddressString(deviceBLink.device)
 					&& deviceBLink.group === insteonLink.group
 				}).length > 0;
 		},
