@@ -31,7 +31,7 @@
 			}
 
 			insteon.buildDeviceSelectOptions('node-input-device',this.device);
-			$("#node-input-device").on('change',RED.nodes.getType("insteon-device-subscribe").updateAvailableEvents(this));
+			$("#node-input-device").on('change',function(){ RED.nodes.getType("insteon-device-subscribe").updateAvailableEvents($(this).val()) });
 		},
 		oneditsave: function(){
 			let node = this;
@@ -48,7 +48,7 @@
 			});
 		},
 		
-		updateAvailableEvents: function(node){						
+		updateAvailableEvents: function(deviceNodeId){
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
 			
@@ -56,10 +56,10 @@
 			$("#deviceEvents li").hide();
 			$("#deviceEvents li.all").show();
 			
-			let deviceConfig = RED.nodes.node(node.device);
+			let deviceConfig = RED.nodes.node(deviceNodeId);
 			
 			if(deviceConfig !== null){
-				let cache = insteon.device.readCache(deviceConfig.address);				
+				let cache = insteon.device.readCache(deviceConfig.address);
 				switch(Number(cache.info.cat)){
 					case 0x01: $("#deviceEvents li.dimmer").show(); break;
 					case 0x02: $("#deviceEvents li.onoff").show(); break;
