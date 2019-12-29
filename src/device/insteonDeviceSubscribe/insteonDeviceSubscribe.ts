@@ -90,11 +90,10 @@ function onReady(node: DeviceSubscribeNode, text: string){
 		if(node.selectedEvents.filter((e: any) => e.event === event.join('.')).length === 1){
 			event.push(type); // put the type back on the event array
 			node.send({
-				topic: event[0],
-				payload: {
-					status: 'to be determined',
-					type: type,
-				},
+				topic: event.join('.'),
+				payload: 'device level tbd',
+				address: node.deviceConfigNode.address,
+				device: node.deviceConfigNode.name,
 				event,
 				packet,
 			});

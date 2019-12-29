@@ -16,7 +16,7 @@
 		inputs: 0,
 		outputs: 1,
 		icon: 'bridge.png',
-		label: function(){ return this.name || RED.nodes.node(this.device) !== null ? `${RED.nodes.node(this.device).name} In` : 'Device In' },
+		label: function(){ return this.name ? this.name : RED.nodes.node(this.device) !== null ? `${RED.nodes.node(this.device).name} In` : 'Device In' },
 		paletteLabel: 'Device In',
 		oneditprepare: function(){
 			let insteon = RED.nodes.getType("insteon-modem-config");
@@ -95,7 +95,7 @@
 	<div class="form-row event-selection">
 		<strong>Fire When Device is</strong>
 		<ul id="deviceEvents">
-			<li class="all">         <input type="checkbox" title="All"                 id="node-input-event-all"                  data-event="p.50"                style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-all">All</label></li>
+			<li class="all">         <input type="checkbox" title="Raw Packets"         id="node-input-event-raw"                  data-event="p.50"                style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-raw">Raw Packets</label></li>
 			<li class="dimmer onoff"><input type="checkbox" title="Turned On"           id="node-input-event-switch-on"            data-event="switch.on"           style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-switch-on">Turned On</label></li>
 			<li class="dimmer onoff"><input type="checkbox" title="Turned Off"          id="node-input-event-switch-off"           data-event="switch.off"          style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-switch-off">Turned Off</label></li>
 			<li class="dimmer onoff"><input type="checkbox" title="Fast On"             id="node-input-event-switch-on-fast"       data-event="switch.on.fast"      style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-switch-on-fast">Fast On</label></li>

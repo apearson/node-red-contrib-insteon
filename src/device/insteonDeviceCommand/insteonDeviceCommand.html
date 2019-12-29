@@ -16,7 +16,7 @@
 		inputs: 1,
 		outputs: 0,
 		icon: 'bridge.png',
-		label: function(){ return this.name || RED.nodes.node(this.device) !== null ? `${RED.nodes.node(this.device).name} Out` : 'Device Out' },
+		label: function(){ return this.name ? this.name : RED.nodes.node(this.device) !== null ? `${RED.nodes.node(this.device).name} Out` : 'Device Out' },
 		paletteLabel: 'Device Out',
 		oneditprepare: function(){			
 			let insteon = RED.nodes.getType("insteon-modem-config");

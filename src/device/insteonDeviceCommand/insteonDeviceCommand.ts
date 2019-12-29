@@ -68,8 +68,6 @@ function onInput(msg: any, node: DeviceCommandNode){
 	let command = node.command === '' ? msg.payload : node.command;
 	let level = Number.isInteger(msg.level) ? Math.round(msg.level / 100 * 255) as Byte : node.onLevel;
 	
-	node.error(level);
-
 	switch(command){
 		case 'on':                  device?.LightOn(level); break;
 		case 'off':                 device?.LightOff(); break;
