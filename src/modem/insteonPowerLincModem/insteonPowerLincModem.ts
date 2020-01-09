@@ -1,6 +1,6 @@
 import logger from 'debug';
 /* Configuring logging */
-const debug = logger('insteon-plm:insteonPowerLincModem');
+const debug = logger('node-red-contrib-insteon:insteonPowerLincModem');
 
 /* Importing types */
 import { Red, NodeProperties } from 'node-red';
