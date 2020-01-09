@@ -9,6 +9,7 @@ interface InsteonModemConfigNode extends Node {
 	path: string;
 	errored: boolean;
 	plm?: PLM;
+	address: string;
 }
 
 interface InsteonDeviceConfigNode extends Node {
