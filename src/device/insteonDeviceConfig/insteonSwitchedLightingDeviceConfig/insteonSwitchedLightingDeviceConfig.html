@@ -4,19 +4,24 @@
 	RED.nodes.registerType('insteon-switched-lighting-device-config',{
 		category: 'config',
 		align: 'left',
-		// defaults: RED.nodes.getType("insteon-device-config").defaults,
 		defaults: {
 			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' },
 			address: { value: '', function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
 			cache: { value: ''},
 		},
+		oneditsave: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
+		oneditcancel: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
+		oneditdelete: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
 		oneditprepare: function(){
 			let node = this;
 			
 			/* import the JS functions from the modem & top level device config node */
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
+
+			/* setup the status event listener to display the node status to the user */
+			insteon.subscribeConfigStatus(node.id, insteon.configStatusHandler);
 
 			/* parse the cache json into an object */
 			let cache = insteon.device.readCache();
@@ -99,6 +104,7 @@
 				
 		<div class="red-ui-tray-toolbar">
 			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+			<div class="insteon-status" style="text-align: left;"></div>
 		</div>		
 	  </div>
 
@@ -117,6 +123,7 @@
 		</table>
 		<div class="red-ui-tray-toolbar">
 			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+			<div class="insteon-status" style="text-align: left;"></div>
 		</div>		
 	  </div>
 
@@ -137,6 +144,7 @@
 		</table>
 		<div class="red-ui-tray-toolbar">
 			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+			<div class="insteon-status" style="text-align: left;"></div>
 		</div>		
 	  </div>
 
