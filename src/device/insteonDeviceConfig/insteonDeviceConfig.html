@@ -49,13 +49,12 @@
 			
 			return cache;
 		},
-		writeCache: function(cache){
-			/* Update the cache input */
-			$('#node-config-input-cache').val(JSON.stringify(cache));
+		writeCache: function(address, cache){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			let node = insteon.getDeviceNode(address);
 			
-			/* Trigger a deploy to save the cache. This is necessary to prevent the UI from going out of sync with the hardware */
-			$("#node-config-dialog-ok").click();
-			$("#red-ui-header-button-deploy-icon").click();			
+			/* Update the cache input */
+			node.cache = JSON.stringify(cache);
 		},
 		//#end region
 		
@@ -70,14 +69,16 @@
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
 			
-			let data = {changed: [], deletedLinks: [], changedLinks: []};
+			let data = {
+				plmConfigNode: $("#node-config-input-modem").val(),
+				deviceConfigNode: insteon.getDeviceNode($('#node-config-input-address').val()).id,
+				address: $('#node-config-input-address').val(),
+				changed: [], deletedLinks: [], changedLinks: []
+			};
 
 			/* parse the cache json into an object */
 			let cache = insteon.device.readCache($('#node-config-input-address').val());
 			
-			data.plmConfigNode = $("#node-config-input-modem").val();
-			data.address = $('#node-config-input-address').val();
-
 			/* Add properties for each checkbox and set value to checked state */
 			$(".insteon-device-config:checkbox").map((i,e) => {
 				// If the present state does not equal the initial state, put the property name in the changed array
@@ -127,19 +128,7 @@
 
 			return JSON.stringify(data);
 		},
-		
-		postConfig: function(args){
-			$.ajax({
-				method: 'POST',
-				dataType: 'JSON',
-				contentType: 'application/json',
-				url: args.url,
-				data: args.data,
-				success: args.success,
-				error: args.error,
-			});
-		},
-		
+				
 		//#end region
 		
 		//#region 
@@ -164,7 +153,7 @@
 			/* import the JS functions from the modem & top level device config node */
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
-			
+
 			/* parse the cache json into an object */
 			let cache = insteon.device.readCache();
 		
@@ -173,13 +162,13 @@
 					
 			/* render the links table */
 			insteon.device.renderLinksTable(cache.links);
-			
+
 			/* setup the write config button */
 			$('.update-device-config').click(function(){
 				$('.update-device-config').addClass('disabled');
 				$('.update-device-config').prop('disabled', true);
 			
-				insteon.device.postConfig({
+				insteon.postConfig({
 					url: 'insteon-device-config',
 					data: insteon.device.serializeConfig(),
 					success: data => {
@@ -190,7 +179,8 @@
 						cache.extendedConfig = data.extendedConfigCache;
 						cache.links = data.linkCache;
 						
-						insteon.device.writeCache(cache);
+						insteon.device.writeCache(node.address, cache);
+						insteon.deployNR();
 					},
 					error: e => {
 						$('.update-device-config').removeClass('disabled');
@@ -209,18 +199,14 @@
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
 
+			// Clearing links and address elements
+			$('#controllerLinks, #responderLinks').empty();
+
 			// If no links then do nothing
 			if(links.length === 0)
 				return;
 
-			// Getting all device config nodes
-			let devices = [];
-			RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) !== null ? devices.push(c) : '');
-
-			// Clearing links and address elements
-			$('#controllerLinks, #responderLinks').empty();
-
-			// For each active link in PLM render a device row
+			// For each active link in device render a device row
 			links.filter(e => e.Type.active).forEach(link => {
 				if(JSON.stringify(link.device) === '[0,0,0]'){
 					return; // Dont bother rendering the highwater link, or any link with a 0,0,0 device
