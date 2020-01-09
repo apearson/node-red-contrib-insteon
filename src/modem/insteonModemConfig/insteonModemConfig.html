@@ -14,6 +14,9 @@
 		oneditprepare: function(){
 			let node = this;
 			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			/* setup the status event listener to display the node status to the user */
+			insteon.subscribeConfigStatus(node.id, insteon.configStatusHandler);
 			
 			/* PLM Path UI */
 			try { $('#node-config-input-path').autocomplete( 'destroy' ); }
@@ -28,12 +31,47 @@
 			$('#accordion').accordion({heightStyle: 'fill'});
 
 			/* PLM links table */
-			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => insteon.sendErrorToDebugConsole(node.id, e));
+			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => insteon.sendErrorToDebugConsole(node.id, e));	
 
 			/* Add device UI */
 			$('#add_device').click(e => {
 				e.preventDefault();
 				insteon.submitAddress(node, 'addNewDevice', $('#new_device_address').val());
+			});
+			
+			$('#add_scene').click(e => {
+				e.preventDefault();
+				
+				let groupNumbers = [];
+				let nextGroupNumber = 0;
+			    $("#links td.group").each(function() {
+					let group = parseInt($(this).text());
+			        if ($.inArray(group, groupNumbers) === -1)
+			            groupNumbers.push(group);
+			    });
+				groupNumbers.sort();
+				
+				for(var i = 2; i<255; i++){
+					if($.inArray(i, groupNumbers) === -1){
+						nextGroupNumber = i;
+						break;
+					}
+				}
+
+				let newNode = {
+					id: RED.nodes.id(),
+					_def: RED.nodes.getType('insteon-scene-config'),
+					type: 'insteon-scene-config',
+					users: [],
+					modem: node.id,
+					scene: nextGroupNumber,
+					name: $('#new_scene_name').val()
+				}
+				
+				RED.nodes.add(newNode);
+
+				// RED.editor.editConfig('', 'insteon-scene-config', '_ADD_');
+				RED.editor.editConfig('', 'insteon-scene-config', newNode.id);
 			});
 
 			/* Remove device UI */
@@ -54,6 +92,13 @@
 			$("#red-ui-tab-debug-link-button").click();
 			RED.debug.handleDebugMessage({ name:name,msg:message, level: 20 });
 		},
+		
+		deployNR: function(){
+			/* Trigger a deploy to save the cache. This is necessary to prevent the UI from going out of sync with the hardware */
+			$("#node-config-dialog-ok").click();
+			$("#red-ui-header-button-deploy-icon").click();
+		},
+		
 
 		/* Submit an Insteon Device address for adding or removing the link from the PLM */
 		submitAddress: function(node, action, address){
@@ -131,10 +176,6 @@
 			// If no links then do nothing
 			if(links.length === 0)
 				return;
-
-			// Getting all device config nodes
-			let devices = [];
-			RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) !== null ? devices.push(c) : '');
 
 			// Hiding links hint for no PLM
 			$('#linkMessage').hide();
@@ -215,7 +256,7 @@
 			deviceCell.appendTo(row);
 
 			// Group Column
-			$('<td>', { style:'white-space:nowrap' })
+			$('<td class="group">', { style:'white-space:nowrap' })
 				.text(link.group)
 				.appendTo(row);
 
@@ -263,6 +304,54 @@
 				error,
 			});
 		},
+		
+		/* Universal post config method for devices and scenes */
+		postConfig: function(args){
+			$.ajax({
+				method: 'POST',
+				dataType: 'JSON',
+				contentType: 'application/json',
+				url: args.url,
+				data: args.data,
+				success: args.success,
+				error: args.error,
+			});
+		},
+		
+		/* Subscribe / unsubscribe from the NR websocket status updates for a node */
+		subscribeConfigStatus: function(nodeId,handler){
+			RED.comms.subscribe(`status/${nodeId}`,handler);
+		},
+		
+		unsubscribeConfigStatus: function(nodeId,handler){
+			RED.comms.unsubscribe(`status/${nodeId}`,handler);
+		},
+
+		configStatusHandler: function(topic,msg){
+			switch(msg.fill){
+				case 'red':    msg.fill = '#cc0000'; break;
+				case 'green':  msg.fill = '#55aa88'; break;
+				case 'yellow': msg.fill = '#F9DF31'; break;
+				case 'blue':   msg.fill = '#53A3F3'; break;
+				case 'grey':   msg.fill = '#d3d3d3'; break;
+			}
+			
+			let shape = `background-color: ${msg.fill};`;
+			if(msg.shape === 'ring'){
+				shape = `border-color: ${msg.fill}; border-width: 2px;`
+			}
+
+			let container = $(".insteon-status");
+			container.css('margin-top','5px');
+			container.empty();
+
+			let rect = $("<div/>",{style: `margin-right: 4px; height: 14px; width: 14px; float: left; border-radius: 3px; ${shape}`});
+			let text = $("<span/>",{text: msg.text, style: "position: relative; top: -2px"});
+
+			rect.appendTo(container);
+			text.appendTo(container);
+		},
+		
 
 		//#endregion
 		
@@ -398,7 +487,7 @@
 				<tr>
 					<th style='text-align: left;'>Type</th>
 					<th style='text-align: left;'>Device</th>
-					<th style='text-align: left;'>Group</th>
+					<th style='text-align: left;'>Scene</th>
 					<th style='text-align: left;'>&nbsp;</th>
 				</tr>
 			</thead>
@@ -409,11 +498,14 @@
 
 	  <h3>Add New Device</h3>
 	  <div>
-		  <p>Links a new device with your PLM. If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
-		  <p>After a new device is linked with the PLM, you can configure the device from the Subscribe or Command nodes.</p>
-		  <input id='new_device_address' style='width: 100px' type='text' placeholder='AA.BB.CC' name='notASearchField1' />
-		  <input id='new_device_name' style='width: 175px' type='text' placeholder='Living Room Switch' name='notASearchField2' />
-		  <button id='add_device' class='btn'>Add Device</button>
+	  	<p>Links a new device with your PLM. If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
+		<p>After a new device is linked with the PLM, you can set the device's insteon settings from it's configuration node.</p>
+		<input id='new_device_address' style='width: 100px' type='text' placeholder='AA.BB.CC' name='notASearchField1' />
+		<input id='new_device_name' style='width: 175px' type='text' placeholder='Living Room Switch' name='notASearchField2' />
+		<button id='add_device' class='btn'>Add Device</button>
+
+		<div class="insteon-status" style="text-align: left;"></div>
+
 	  </div>
 
 	  <h3>Remove Device</h3>
@@ -422,8 +514,15 @@
 		<p>If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
 	  	<select id='device_address_to_remove'></select>
 		<button id='remove_device' class='btn'>Remove Device</button>
+		<div class="insteon-status" style="text-align: left;"></div>
 	  </div>
 
+	  <h3>Add Scene</h3>
+	  <div>
+		  <input id='new_scene_name' style='width: 175px' type='text' placeholder='Living Room Switch' name='notASearchField3' />
+		  <button id='add_scene' class='btn'>Add Scene</button>
+	  </div>
+	  
 	</div> <!-- End accordion -->
 
 	</div>
