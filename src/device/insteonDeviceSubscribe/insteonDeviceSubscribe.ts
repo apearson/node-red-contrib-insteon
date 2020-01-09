@@ -92,8 +92,8 @@ function onReady(node: DeviceSubscribeNode, text: string){
 			node.send({
 				topic: event.join('.'),
 				payload: 'device level tbd',
-				address: node.deviceConfigNode.address,
-				device: node.deviceConfigNode.name,
+				address: node.deviceConfigNode?.address,
+				device: node.deviceConfigNode?.name,
 				event,
 				packet,
 			});
