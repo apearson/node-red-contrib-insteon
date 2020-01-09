@@ -1,7 +1,9 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import PLM, { 
-	Byte, Packet, Utilities,
+import PLM, {	
+	Byte, Packet, Utilities, AllLinkRecordType, AllLinkRecordOperation,
+	
+	InsteonDevice,
 
 	DimmableLightingDevice,
 	KeypadDimmer,
@@ -23,6 +25,7 @@ import { validatePLMConnection } from '../../device/insteonDeviceConfig/configMe
 /* Interfaces */
 interface PLMConfigNodeProps extends NodeProperties {
 	path: string;
+	address: string;
 }
 
 /* Reconnect time settings */
@@ -42,6 +45,8 @@ export = function(RED: Red){
 		/* Saving config */
 		this.path = props.path;
 		this.errored = false;
+		this.address = props.address;
+		this.name = props.name;
 
 		/* Setting up PLM */
 		setupPLM(this);
@@ -72,7 +77,6 @@ export = function(RED: Red){
 		(req: any, res: any) => manageDevice(RED, req, res)
 	);
 	
-	
 	/* Server to handle device configuration and link changes */
 	RED.httpAdmin.post(
 		"/insteon-device-config",
@@ -80,7 +84,12 @@ export = function(RED: Red){
 		(req: any, res: any) => updateDeviceConfig(RED, req, res)
 	);
 	
-	
+	/* Server to handle scene configuration and link changes */
+	RED.httpAdmin.post(
+		"/insteon-scene-config",
+		RED.auth.needsPermission('serial.read'),
+		(req: any, res: any) => updateSceneConfig(RED, req, res)
+	);
 };
 
 //#region Connection Functions
@@ -160,6 +169,7 @@ async function getInsteonPorts(req: Request, res: Response){
 	}
 
 }
+
 async function getInsteonLinks(RED: Red, req: Request, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
@@ -172,12 +182,15 @@ async function getInsteonLinks(RED: Red, req: Request, res: Response){
 		res.status(500).send({message: 'An error has occured', caught: e.message});
 	}
 }
+
 async function manageDevice(RED: Red, req: Request, res: Response){
 	try{
 		let PLMConfigNode = validatePLMConnection(RED, req.body.id);
 
 		/* Validate the device address */
 		if(!Utilities.validateAddress(req.body.address)){
+			PLMConfigNode.status({fill: 'red', shape: 'dot', text: 'Invalid address.'});
+			
 			// Server side failure
 			res.status(400);
 			res.json({
@@ -193,44 +206,64 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 		let deviceCache = {} as any;
 		
 		if(req.body.action === 'addNewDevice'){
+			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Linking Device...'});
 			try{
 				result = await PLMConfigNode?.plm?.linkDevice(address);
 				messageVerb = "linked";
 			}catch(e){
+				PLMConfigNode.status({fill: 'red', shape: 'dot', text: 'Linking failed.'});
 				res.status(500).send({message: "Failed to link device", caught: e.message});
 				return;
 			}
 
+			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Waiting...'});
+
 			await sleep(1000);
+
+			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Querying Device...'});
 			
 			try{
 				/* Get device info after we've added it */
 				deviceCache.info = await PLMConfigNode.plm?.queryDeviceInfo(address);
 			}catch(e){
+				PLMConfigNode.status({fill: 'red', shape: 'dot', text: 'Failed to Query Device...'});
 				res.status(500).send({message: "Failed to get device info", caught: e.message});
 				return;
 			}
+
+			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Creating Device Instance...'});
 			
 			let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false, cache: deviceCache });
+
+			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Loading Device Config...'});
 			
 			deviceCache.config = await device?.readConfig();
 
 			deviceCache.extendedConfig = await device?.readExtendedConfig();
 
+			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Loading Device Link Database...'});
+
 			deviceCache.links = await device?.syncLinks();
 			
 		}else if(req.body.action === 'removeDevice'){
+			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Removing Device...'});
 			try{
 				/* Get device info before we remove it */
-				deviceCache.info = await PLMConfigNode.plm!.queryDeviceInfo(address);
-			}catch(e){ /* don't do anything, if the device is broken we should still try and unlink it */ }
+				deviceCache.info = await PLMConfigNode.plm?.queryDeviceInfo(address);
+			}catch(e){
+				/* don't do anything, if the device is broken we should still try and unlink it */
+				PLMConfigNode.status({fill: 'red', shape: 'dot', text: 'Device did not respond...'});
+			}
 			
 			await sleep(1000);
 			
 			try{
+				PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Removing Device Link From PLM...'});
 				result = await PLMConfigNode?.plm?.unlinkDevice(address);
 				messageVerb = "unlinked";			
 			}catch(e){
+				PLMConfigNode.status({fill: 'red', shape: 'dot', text: 'Removing Device Link Failed.'});
+				
 				res.status(500).send({message: "Failed to unlink device", caught: e.message});
 				return;
 			}
@@ -238,7 +271,15 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 			throw new Error("Invalid action");
 		}
 
+		PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Loading PLM Link Database...'});
+
 		let links = await PLMConfigNode?.plm?.syncLinks();
+
+		PLMConfigNode.status({fill: 'green', shape: 'dot', text: 'Done.'});
+		
+		await sleep(500);
+		
+		PLMConfigNode.status({});
 
 		res.json({
 			result: result,
@@ -258,9 +299,13 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 	try{		
 		let PLMConfigNode = validatePLMConnection(RED, req.body.plmConfigNode);
+		
+		let deviceConfigNode = RED.nodes.getNode(req.body.deviceConfigNode);
 
 		/* Validate the device address */
 		if(!Utilities.validateAddress(req.body.address)){
+			deviceConfigNode?.status({fill: 'red', shape: 'dot', text: 'Invalid address.'});
+
 			// Server side failure
 			res.status(400);
 			res.json({
@@ -271,7 +316,11 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 		
 		let address = Utilities.toAddressArray(req.body.address) as Byte[];
 
+		deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: 'Loading device...'});
+
 		let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false });
+		
+		deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: 'Updating configuration...'});
 		
 		/* write each of the configuration settings */
 		if(req.body.changed.indexOf("programLock") !== -1)
@@ -297,6 +346,8 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 		
 		/* If any links require deletion */
 		if(req.body.deletedLinks.length > 0){
+			deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Deleting Links...`});
+			
 			for(let i = 0; i < req.body.deletedLinks.length; i++){
 				await device?.clearDatabaseRecord(req.body.deletedLinks[i]).catch(function(){ res.status(500).send({message: 'An error has occured', caught: "clearDatabaseRecord failed"}) });
 			}
@@ -304,18 +355,30 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 		
 		/* If any links require updating */
 		if(req.body.changedLinks.length > 0){
+			deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Updating Links...`});
+
 			for(let i = 0; i < req.body.changedLinks.length; i++){
 				let link = req.body.changedLinks[i];
 				await device?.modifyDatabase(link.address, link);
 			}
 		}
 
+		deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Reading device config...`});
+
 		let configCache = await device?.readConfig();
 
 		let extendedConfigCache = await device?.readExtendedConfig();
+
+		deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Reading device link database...`});
 		
 		let linkCache = await device?.syncLinks();
 		
+		deviceConfigNode?.status({fill: 'green', shape: 'dot', text: `Done.`});
+		
+		await sleep(500);
+
+		deviceConfigNode?.status({});
+
 		res.json({
 			configCache: configCache,
 			extendedConfigCache: extendedConfigCache,
@@ -328,6 +391,194 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 		res.status(500).send({message: 'An error has occured', caught: e.message});
 	}
 }
+
+async function updateSceneConfig(RED: Red, req: Request, res: Response){
+	
+	try{
+		let PLMConfigNode = validatePLMConnection(RED, req.body.plmConfigNode);
+		let node = RED.nodes.getNode(req.body.sceneConfigNode);
+		let devices = {} as any;
+		let descriptions = [] as any;
+		let data = {devices: []} as any;
+		
+		if(!req.body.groupMembers.length){
+			throw Error("Scene device list was empty.");
+		}
+		
+		/* Put the modem description in the descriptions list */
+		descriptions[PLMConfigNode.address] = PLMConfigNode.name || 'Modem';
+				
+		/* Load all devices which are part of the scene */
+		node?.status({fill: 'yellow', shape: 'dot', text: `Querying ${req.body.groupMembers.length} scene members...`});
+		
+		await sleep(1000);
+		
+		for(var i = 0; i < req.body.groupMembers.length; i++){
+			let address = Utilities.toAddressArray(req.body.groupMembers[i].address) as Byte[];
+			
+			node?.status({fill: 'yellow', shape: 'dot', text: `Querying ${req.body.groupMembers[i].description} ...`});
+			
+			devices[req.body.groupMembers[i].address] = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: true, syncLinks: false });
+			await devices[req.body.groupMembers[i].address].syncLinks();
+			
+			descriptions[req.body.groupMembers[i].address] = req.body.groupMembers[i].description;
+		}
+		
+		node?.status({fill: 'green', shape: 'dot', text: `All devices loaded!`});
+		
+		await sleep(1000);
+
+		/* Process all the NEW device links */
+		if(req.body.deviceLinksToAdd.length > 0){
+			for(var i = 0; i < req.body.deviceLinksToAdd.length; i++){
+				let newLink = req.body.deviceLinksToAdd[i];
+				let device = devices[newLink.deviceAddress];
+				let linkAddress = [] as Byte[];
+				let addHighWater = false;
+
+				node?.status({fill: 'yellow', shape: 'dot', text: `Adding ${newLink.control ? "controler" : "responder"} link for ${descriptions[newLink.foreignAddress]} to ${descriptions[newLink.deviceAddress]}...`});
+
+				/* In order to add a link, we have to calculate the next available address.
+				 * Loop through the links and find the first unused address (device will be 0.0.0)
+				 * If none are found, write to the last position and insert a new high water mark
+				 */
+				for(var j = 0; j < device?.links.length; j++){
+					let link = device?.links[j];
+
+					if(Utilities.toAddressString(link.device) === '00.00.00'){
+						linkAddress = link.address;
+
+						addHighWater = link.Type.highwater;
+
+						/* Overwrite device address of the updated link in case more than one link will be added to the device in this session */
+						device.links[j].device = Utilities.toAddressArray(newLink.foreignAddress);
+					}
+				}
+
+				/* Write the new link */
+				let result = await device?.modifyDatabase(linkAddress, {
+					group: newLink.group,
+					device: Utilities.toAddressArray(newLink.foreignAddress),
+					onLevel: newLink.onLevel,
+					rampRate: newLink.rampRate,
+					Type: {
+						active: true,
+						control: newLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder
+					}
+				});
+				
+				console.log(`modify ${descriptions[newLink.deviceAddress]} database: ${result}; linkAddress: `,linkAddress, device.links);
+
+				/* Write new highwater link */
+				if(addHighWater){
+					linkAddress = Utilities.nextLinkAddress(linkAddress); // increment the address
+					console.log('new high water',linkAddress);
+
+					await device?.clearDatabaseRecord(linkAddress, true);
+				}
+			}
+		}
+
+		/* Process all CHANGED device links - should only be responder links which had a ramp/level setting change */
+		if(req.body.deviceLinksToUpdate.length > 0){
+			for(var i = 0; i < req.body.deviceLinksToUpdate.length; i++){
+				let changeLink = req.body.deviceLinksToUpdate[i];
+				let device = devices[changeLink.deviceAddress];
+
+				node?.status({fill: 'yellow', shape: 'dot', text: `Updating ${changeLink.control ? "controler" : "responder"} link for ${descriptions[changeLink.foreignAddress]} on ${descriptions[changeLink.deviceAddress]}...`});
+
+				/* Update the link */
+				await device?.modifyDatabase(changeLink.linkAddress, {
+					group: changeLink.group,
+					device: Utilities.toAddressArray(changeLink.foreignAddress),
+					onLevel: changeLink.onLevel,
+					rampRate: changeLink.rampRate,
+					Type: {
+						active: true,
+						control: changeLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder
+					}
+				});
+			}
+		}
+
+		/* Process all DELETED device links */
+		if(req.body.deviceLinksToDelete.length > 0){
+			for(var i = 0; i < req.body.deviceLinksToDelete.length; i++){
+				let deleteLink = req.body.deviceLinksToDelete[i];
+				let device = devices[deleteLink.deviceAddress];
+
+				node?.status({fill: 'yellow', shape: 'dot', text: `Removing ${deleteLink.control ? "controler" : "responder"} link for ${descriptions[deleteLink.foreignAddress]} from ${descriptions[deleteLink.deviceAddress]}...`});
+
+				await device.clearDatabaseRecord(deleteLink.linkAddress, false);
+
+			}
+		}
+		
+		/* Process all the NEW modem links */
+		if(req.body.plmLinksToAdd.length > 0){
+			for(var i = 0; i < req.body.plmLinksToAdd.length; i++){
+				let newLink = req.body.plmLinksToAdd[i];
+				let deviceAddress = Utilities.toAddressArray(newLink.deviceAddress);
+				let operation = newLink.controller ? AllLinkRecordOperation.ModifyFirstControllerFoundOrAdd : AllLinkRecordOperation.ModifyFirstResponderFoundOrAdd;
+				let type = newLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder;
+				const linkData = [0x00,0x00,0x00] as Byte[];
+
+				node?.status({fill: 'yellow', shape: 'dot', text: `Adding ${newLink.control ? "controler" : "responder"} link for ${descriptions[newLink.foreignAddress]} to ${descriptions[newLink.deviceAddress]}...`});
+								
+				let result = await PLMConfigNode.plm?.manageAllLinkRecord(deviceAddress, newLink.group, operation, type, linkData);
+				
+				if(!result){
+					node?.status({fill: 'red', shape: 'dot', text: `Failed to add ${newLink.control ? "controler" : "responder"} link for ${descriptions[newLink.foreignAddress]} to ${descriptions[newLink.deviceAddress]}...`});
+					
+				}
+			}
+		}
+		
+		/* Process all the DELETED modem links */
+		if(req.body.plmLinksToDelete.length > 0){
+			for(var i = 0; i < req.body.plmLinksToDelete.length; i++){
+				let deleteLink = req.body.plmLinksToDelete[i];
+				let deviceAddress = Utilities.toAddressArray(deleteLink.deviceAddress);
+				let operation = AllLinkRecordOperation.ModifyFirstFoundOrAdd;
+				let type = AllLinkRecordType.Delete;
+				const linkData = [0x00,0x00,0x00] as Byte[];
+
+				node?.status({fill: 'yellow', shape: 'dot', text: `Deleting ${deleteLink.control ? "controler" : "responder"} link for ${descriptions[deleteLink.foreignAddress]} from ${descriptions[deleteLink.deviceAddress]}...`});
+
+				let result = await PLMConfigNode.plm?.manageAllLinkRecord(deviceAddress, deleteLink.group, operation, type, linkData);
+
+				if(!result){
+					node?.status({fill: 'red', shape: 'dot', text: `Failed to delete ${deleteLink.control ? "controler" : "responder"} link for ${descriptions[deleteLink.foreignAddress]} from ${descriptions[deleteLink.deviceAddress]}...`});
+					
+				}
+				
+			}
+		}
+		
+				
+		for(var address in devices){
+			node?.status({fill: 'yellow', shape: 'dot', text: `Refreshing ${descriptions[address]} links...`});
+
+			let links = await devices[address].syncLinks();			
+			data.devices.push({
+				address,
+				links
+			});
+		}
+		
+		node?.status({fill: 'green', shape: 'dot', text: `Scene update finished.`});
+		
+		await sleep(1000);
+
+		node?.status({});
+
+		res.json(data);
+	}
+	catch(e){
+		res.status(500).send({message: 'An error has occured while updating the scene.', caught: e.message});
+	}
+}
+
 
 //#endregion
 

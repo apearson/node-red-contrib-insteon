@@ -34,12 +34,12 @@
 			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => insteon.sendErrorToDebugConsole(node.id, e));	
 
 			/* Add device UI */
-			$('#add_device').click(e => {
+			$('#add-device').click(e => {
 				e.preventDefault();
-				insteon.submitAddress(node, 'addNewDevice', $('#new_device_address').val());
+				insteon.submitAddress(node, 'addNewDevice', $('#new-device-address').val());
 			});
 			
-			$('#add_scene').click(e => {
+			$('#add-scene').click(e => {
 				e.preventDefault();
 				
 				let groupNumbers = [];
@@ -64,20 +64,23 @@
 					type: 'insteon-scene-config',
 					users: [],
 					modem: node.id,
-					scene: nextGroupNumber,
-					name: $('#new_scene_name').val()
+					group: nextGroupNumber,
+					name: $('#new-scene-name').val()
 				}
 				
 				RED.nodes.add(newNode);
-
-				// RED.editor.editConfig('', 'insteon-scene-config', '_ADD_');
-				RED.editor.editConfig('', 'insteon-scene-config', newNode.id);
+				
+				insteon.deployNR();
+				
+				setTimeout(() => {
+					RED.editor.editConfig('', 'insteon-scene-config', newNode.id);
+				}, 500);
 			});
 
 			/* Remove device UI */
-			$('#remove_device').click(e => {
+			$('#remove-device').click(e => {
 				e.preventDefault();
-				insteon.submitAddress(node, 'removeDevice', $('#device_address_to_remove').val());
+				insteon.submitAddress(node, 'removeDevice', $('#device-address-to-remove').val());
 			});
 		},
 
@@ -104,11 +107,11 @@
 		submitAddress: function(node, action, address){
 			let insteon = RED.nodes.getType("insteon-modem-config");
 
-			$('#add_device,#remove_device').prop('disabled', true);
+			$('#add-device,#remove-device').prop('disabled', true);
 
 			insteon.manageDevice(node.id, address, action,
 				data => {
-					$('#add_device,#remove_device').prop('disabled', false);
+					$('#add-device,#remove-device').prop('disabled', false);
 				
 					// Create the config node
 					if(data.action === 'addNewDevice'){
@@ -121,7 +124,7 @@
 								users: [],
 								modem: node.id,
 								address: address,
-								name: $('#new_device_name').val(),
+								name: $('#new-device-name').val(),
 								cache: JSON.stringify(data.deviceCache)
 							}
 							RED.nodes.add(newNode);
@@ -137,12 +140,12 @@
 
 					alert(data.message);
 
-					$('#new_device_address').val('');
-					$('#new_device_name').val('');
+					$('#new-device-address').val('');
+					$('#new-device-name').val('');
 					insteon.renderLinksTable(data.links);
 				},
 				e => {
-					$('#add_device,#remove_device').prop('disabled', false);
+					$('#add-device,#remove-device').prop('disabled', false);
 
 					insteon.sendErrorToDebugConsole(node.id,`${e.responseJSON.message}: ${e.responseJSON.caught}`);
 				}
@@ -182,7 +185,7 @@
 
 			// Clearing links and address elements
 			$('#links').empty();
-			$('#device_address_to_remove').empty();
+			$('#device-address-to-remove').empty();
 
 			// Sorting links by group
 			links = links.sort((a, b) => a.type > b.type ? 1 : a.group > b.group ? 1 : b.group > a.group ? -1 : 0);
@@ -206,8 +209,8 @@
 						click: function(e){
 							e.preventDefault();
 							// Switch to the add new device panel in the accordion
-							$("#new_device_address").val(insteon.toAddressString(link.device));
-							$("#new_device_name").focus();
+							$("#new-device-address").val(insteon.toAddressString(link.device));
+							$("#new-device-name").focus();
 							$("#accordion").accordion( "option", "active", 1);
 						}
 					}).appendTo(deviceCell);
@@ -237,7 +240,7 @@
 				$('<option/>', {
 					value: `${insteon.toAddressString(link.device)}`,
 					html: optionText
-				}).appendTo($('#device_address_to_remove'));
+				}).appendTo($('#device-address-to-remove'));
 
 			});
 		},
@@ -500,9 +503,9 @@
 	  <div>
 	  	<p>Links a new device with your PLM. If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
 		<p>After a new device is linked with the PLM, you can set the device's insteon settings from it's configuration node.</p>
-		<input id='new_device_address' style='width: 100px' type='text' placeholder='AA.BB.CC' name='notASearchField1' />
-		<input id='new_device_name' style='width: 175px' type='text' placeholder='Living Room Switch' name='notASearchField2' />
-		<button id='add_device' class='btn'>Add Device</button>
+		<input id='new-device-address' style='width: 100px' type='text' placeholder='AA.BB.CC' name='notASearchField1' />
+		<input id='new-device-name' style='width: 175px' type='text' placeholder='Living Room Switch' name='notASearchField2' />
+		<button id='add-device' class='btn'>Add Device</button>
 
 		<div class="insteon-status" style="text-align: left;"></div>
 
@@ -512,15 +515,15 @@
 	  <div>
 	  	<p>Removes the controller & responder links from both the device and the PLM.</p>
 		<p>If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
-	  	<select id='device_address_to_remove'></select>
-		<button id='remove_device' class='btn'>Remove Device</button>
+	  	<select id='device-address-to-remove'></select>
+		<button id='remove-device' class='btn'>Remove Device</button>
 		<div class="insteon-status" style="text-align: left;"></div>
 	  </div>
 
 	  <h3>Add Scene</h3>
 	  <div>
-		  <input id='new_scene_name' style='width: 175px' type='text' placeholder='Living Room Switch' name='notASearchField3' />
-		  <button id='add_scene' class='btn'>Add Scene</button>
+		  <input id='new-scene-name' style='width: 175px' type='text' placeholder='Coming Home' name='notASearchField3' />
+		  <button id='add-scene' class='btn'>Add Scene</button>
 	  </div>
 	  
 	</div> <!-- End accordion -->
