@@ -1,7 +1,7 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
 import PLM, {	
-	Byte, Packet, Utilities, AllLinkRecordType, AllLinkRecordOperation,
+	Byte, Packet, Utilities, AllLinkRecordType, AllLinkRecordOperation, DeviceLinkRecord,
 	
 	InsteonDevice,
 
@@ -371,7 +371,21 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 
 		deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Reading device link database...`});
 		
-		let linkCache = await device?.syncLinks();
+		let linkCache = await device?.syncLinks() || [];
+		
+		/* Get the current high water link */
+		let highWaterLink = linkCache.find(link => link.Type.highWater) || {address: []};
+		
+		/* Calculate which link should be the high water mark based on which links are in use */
+		let calculatedHighWaterAddress = Utilities.calculateHighWaterAddress(linkCache as DeviceLinkRecord[]);
+		
+		/* Check to see if a new high water link is required by comparing the calculated hwm to the existing hwm */
+		if(Utilities.toAddressString(calculatedHighWaterAddress) !== Utilities.toAddressString(highWaterLink.address)){
+			deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Writing new high water mark...`});
+			await device?.clearDatabaseRecord(calculatedHighWaterAddress, true);
+			deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Re-reading device link database...`});
+			linkCache = await device?.syncLinks() || [];
+		}
 		
 		deviceConfigNode?.status({fill: 'green', shape: 'dot', text: `Done.`});
 		
@@ -380,6 +394,7 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 		deviceConfigNode?.status({});
 
 		res.json({
+			address: req.body.address,
 			configCache: configCache,
 			extendedConfigCache: extendedConfigCache,
 			linkCache: linkCache,
@@ -452,6 +467,8 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 
 						/* Overwrite device address of the updated link in case more than one link will be added to the device in this session */
 						device.links[j].device = Utilities.toAddressArray(newLink.foreignAddress);
+						
+						break;
 					}
 				}
 
@@ -467,8 +484,6 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 					}
 				});
 				
-				console.log(`modify ${descriptions[newLink.deviceAddress]} database: ${result}; linkAddress: `,linkAddress, device.links);
-
 				/* Write new highwater link */
 				if(addHighWater){
 					linkAddress = Utilities.nextLinkAddress(linkAddress); // increment the address
