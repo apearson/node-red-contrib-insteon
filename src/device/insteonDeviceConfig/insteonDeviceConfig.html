@@ -53,8 +53,12 @@
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			let node = insteon.getDeviceNode(address);
 			
-			/* Update the cache input */
+			/* Update the cache */
 			node.cache = JSON.stringify(cache);
+			node.dirty = true;
+			
+			/* Update the cache input (if there is one) */
+			$(`#node-config-input-cache[data-address='${address}']`).val(node.cache); 
 		},
 		//#end region
 		
@@ -153,6 +157,9 @@
 			/* import the JS functions from the modem & top level device config node */
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			/* Tag the cache input with the node-id */
+			$("#node-config-input-cache").attr('data-address',node.address);
 
 			/* parse the cache json into an object */
 			let cache = insteon.device.readCache();
@@ -179,7 +186,7 @@
 						cache.extendedConfig = data.extendedConfigCache;
 						cache.links = data.linkCache;
 						
-						insteon.device.writeCache(node.address, cache);
+						insteon.device.writeCache(data.address, cache);
 						insteon.deployNR();
 					},
 					error: e => {
