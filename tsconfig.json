@@ -19,8 +19,8 @@
 
 	},
 	"include": [
-    "./src/**/*"
-  ],
+		"./src/**/*"
+	],
 	"references": [
 		{ "path": "../insteon-plm" }
 	]
