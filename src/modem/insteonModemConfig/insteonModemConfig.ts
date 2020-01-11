@@ -408,8 +408,10 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 }
 
 async function updateSceneConfig(RED: Red, req: Request, res: Response){
-	
+	console.log('updating scene config');
+			
 	try{
+
 		let PLMConfigNode = validatePLMConnection(RED, req.body.plmConfigNode);
 		let node = RED.nodes.getNode(req.body.sceneConfigNode);
 		let devices = {} as any;
@@ -461,35 +463,64 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 					let link = device?.links[j];
 
 					if(Utilities.toAddressString(link.device) === '00.00.00'){
+						console.log(`Using ${newLink.deviceAddress} : ${link.address.toString()}, index ${j}`);
+						
 						linkAddress = link.address;
 
-						addHighWater = link.Type.highwater;
+						addHighWater = link.Type.highWater;
 
 						/* Overwrite device address of the updated link in case more than one link will be added to the device in this session */
 						device.links[j].device = Utilities.toAddressArray(newLink.foreignAddress);
+						device.links[j].Type.highWater = false;
+						device.links[j].manipulated = true;
 						
 						break;
 					}
 				}
-
-				/* Write the new link */
-				let result = await device?.modifyDatabase(linkAddress, {
-					group: newLink.group,
-					device: Utilities.toAddressArray(newLink.foreignAddress),
-					onLevel: newLink.onLevel,
-					rampRate: newLink.rampRate,
-					Type: {
-						active: true,
-						control: newLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder
-					}
-				});
+				
+				if(linkAddress.length === 0){
+					console.log('NO LINK ADDRESS');
+					console.log(device?.links);
+					console.log('==============');
+				}else{
+					console.log(`Writing ${newLink.deviceAddress} : ${linkAddress.toString()}`);
+					
+					/* Write the new link */
+					let result = await device?.modifyDatabase(linkAddress, {
+						group: newLink.group,
+						device: Utilities.toAddressArray(newLink.foreignAddress),
+						onLevel: newLink.onLevel,
+						rampRate: newLink.rampRate,
+						Type: {
+							active: true,
+							control: newLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder
+						}
+					});
+				}
 				
 				/* Write new highwater link */
 				if(addHighWater){
-					linkAddress = Utilities.nextLinkAddress(linkAddress); // increment the address
-					console.log('new high water',linkAddress);
+					let nextLinkAddress = Utilities.nextLinkAddress(linkAddress); // increment the address
 
-					await device?.clearDatabaseRecord(linkAddress, true);
+					console.log(`Writing ${newLink.deviceAddress} : ${nextLinkAddress.toString()} - highwater`);
+
+					let result = await device?.clearDatabaseRecord(nextLinkAddress, true);
+					
+					device?.links.push({
+						address: nextLinkAddress,
+						device: [0x00, 0x00, 0x00],
+						group: 0,
+						onLevel: 0,
+						rampRate: 0,
+						Type: {
+							control: AllLinkRecordType.Responder,
+							active: false,
+							highwater: true,
+							smartHop: 0
+						}
+					});
+					
+					console.log('after modding & pushing',nextLinkAddress, device.links[device.links.length-1].address, device?.links);
 				}
 			}
 		}
@@ -555,7 +586,7 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 				let deleteLink = req.body.plmLinksToDelete[i];
 				let deviceAddress = Utilities.toAddressArray(deleteLink.deviceAddress);
 				let operation = AllLinkRecordOperation.ModifyFirstFoundOrAdd;
-				let type = AllLinkRecordType.Delete;
+				let type = AllLinkRecordType.Deleted;
 				const linkData = [0x00,0x00,0x00] as Byte[];
 
 				node?.status({fill: 'yellow', shape: 'dot', text: `Deleting ${deleteLink.control ? "controler" : "responder"} link for ${descriptions[deleteLink.foreignAddress]} from ${descriptions[deleteLink.deviceAddress]}...`});

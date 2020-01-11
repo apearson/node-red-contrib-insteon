@@ -424,7 +424,7 @@
 		 * Calculates each link for each device in the scene which must be added, changed or removed
 		 * The data must be JSON serialized in order for it to be properly posted by postConfig and decoded by the server
 		 */
-		serializeConfig: function(sceneConfigNode){
+		serializeConfig: function(sceneConfigNodeId){
 			let insteon = RED.nodes.getType("insteon-modem-config");
 			insteon.device = RED.nodes.getType("insteon-device-config");
 			insteon.scene = RED.nodes.getType("insteon-scene-config");
@@ -435,7 +435,7 @@
 			
 			let data = {
 				plmConfigNode,
-				sceneConfigNode,
+				sceneConfigNodeId,
 				groupMembers: [],
 				plmLinksToAdd: [], plmLinksToDelete: [],
 				deviceLinksToAdd: [], deviceLinksToDelete: [], deviceLinksToUpdate: []
