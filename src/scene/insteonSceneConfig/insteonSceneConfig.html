@@ -203,8 +203,10 @@
 			let controllers = devices.filter(device => {
 				return responders.map(responder => 
 					responder.device.address
-				).every(responderAddress => 
-					device.links.filter(link => link.Type.control).map(link => insteon.toAddressString(link.device)).indexOf(responderAddress) > -1
+				).every(responderAddress => {
+						return responderAddress === device.address
+						|| device.links.filter(link => link.Type.control).map(link => insteon.toAddressString(link.device)).indexOf(responderAddress) > -1
+					}
 				)
 			}).map(device => {
 				return insteon.scene.makeSceneMember(device, {}, true);

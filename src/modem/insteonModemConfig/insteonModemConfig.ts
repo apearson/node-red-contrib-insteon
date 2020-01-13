@@ -371,10 +371,10 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 
 		deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Reading device link database...`});
 		
-		let linkCache = await device?.syncLinks() || [];
+		let linkCache = await device?.syncLinks() ?? [];
 		
 		/* Get the current high water link */
-		let highWaterLink = linkCache.find(link => link.Type.highWater) || {address: []};
+		let highWaterLink = linkCache.find(link => link.Type.highWater) ?? {address: []};
 		
 		/* Calculate which link should be the high water mark based on which links are in use */
 		let calculatedHighWaterAddress = Utilities.calculateHighWaterAddress(linkCache as DeviceLinkRecord[]);
@@ -384,7 +384,7 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 			deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Writing new high water mark...`});
 			await device?.clearDatabaseRecord(calculatedHighWaterAddress, true);
 			deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: `Re-reading device link database...`});
-			linkCache = await device?.syncLinks() || [];
+			linkCache = await device?.syncLinks() ?? [];
 		}
 		
 		deviceConfigNode?.status({fill: 'green', shape: 'dot', text: `Done.`});
@@ -407,23 +407,22 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 	}
 }
 
-async function updateSceneConfig(RED: Red, req: Request, res: Response){
-	console.log('updating scene config');
-			
+async function updateSceneConfig(RED: Red, req: Request, res: Response){			
 	try{
 
 		let PLMConfigNode = validatePLMConnection(RED, req.body.plmConfigNode);
-		let node = RED.nodes.getNode(req.body.sceneConfigNode);
+		let node = RED.nodes.getNode(req.body.sceneConfigNodeId);
 		let devices = {} as any;
 		let descriptions = [] as any;
 		let data = {devices: []} as any;
 		
 		if(!req.body.groupMembers.length){
+			node?.status({fill: 'red', shape: 'dot', text: `Scene device list was empty.`});
 			throw Error("Scene device list was empty.");
 		}
 		
 		/* Put the modem description in the descriptions list */
-		descriptions[PLMConfigNode.address] = PLMConfigNode.name || 'Modem';
+		descriptions[PLMConfigNode.address] = PLMConfigNode.name ?? 'Modem';
 				
 		/* Load all devices which are part of the scene */
 		node?.status({fill: 'yellow', shape: 'dot', text: `Querying ${req.body.groupMembers.length} scene members...`});
@@ -463,11 +462,7 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 					let link = device?.links[j];
 
 					if(Utilities.toAddressString(link.device) === '00.00.00'){
-						console.log(`Using ${newLink.deviceAddress} : ${link.address.toString()}, index ${j}`);
-						
 						linkAddress = link.address;
-
-						addHighWater = link.Type.highWater;
 
 						/* Overwrite device address of the updated link in case more than one link will be added to the device in this session */
 						device.links[j].device = Utilities.toAddressArray(newLink.foreignAddress);
@@ -479,50 +474,49 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 				}
 				
 				if(linkAddress.length === 0){
-					console.log('NO LINK ADDRESS');
-					console.log(device?.links);
-					console.log('==============');
-				}else{
-					console.log(`Writing ${newLink.deviceAddress} : ${linkAddress.toString()}`);
+					let lastLinkAddress = device?.links[device?.links.length - 1].address;
+					linkAddress = Utilities.nextLinkAddress(lastLinkAddress); // get the next address
 					
-					/* Write the new link */
-					let result = await device?.modifyDatabase(linkAddress, {
-						group: newLink.group,
+					/* Push the new address onto the device's links array so that nextLinkAddress doesn't recycle this address */
+					device.links.push({
+						address: linkAddress,
 						device: Utilities.toAddressArray(newLink.foreignAddress),
+						group: newLink.group,
+						Type: {active: true, control: newLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder, smartHop: 0, highWater: false},
 						onLevel: newLink.onLevel,
 						rampRate: newLink.rampRate,
-						Type: {
-							active: true,
-							control: newLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder
-						}
+						type: 0x00
 					});
 				}
 				
+				/* Write the new link */
+				let result = await device?.modifyDatabase(linkAddress, {
+					group: newLink.group,
+					device: Utilities.toAddressArray(newLink.foreignAddress),
+					onLevel: newLink.onLevel,
+					rampRate: newLink.rampRate,
+					Type: {
+						active: true,
+						control: newLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder,
+						highWater: false
+					}
+				});
+				
+			} // End deviceLinksToAdd loop
+			
+			const uniqueDeviceAddresses = [...new Set(req.body.deviceLinksToAdd.map((d: any) => d.deviceAddress))];
+			
+			await uniqueDeviceAddresses.map(async (address: any) => {
+				node?.status({fill: 'yellow', shape: 'dot', text: `Writing high water mark to ${descriptions[address]}...`});
+
+				let device = devices[address];
+				
 				/* Write new highwater link */
-				if(addHighWater){
-					let nextLinkAddress = Utilities.nextLinkAddress(linkAddress); // increment the address
+				let highWaterAddress = Utilities.calculateHighWaterAddress(device.links);
 
-					console.log(`Writing ${newLink.deviceAddress} : ${nextLinkAddress.toString()} - highwater`);
+				let result = await device?.clearDatabaseRecord(highWaterAddress, true);
+			});
 
-					let result = await device?.clearDatabaseRecord(nextLinkAddress, true);
-					
-					device?.links.push({
-						address: nextLinkAddress,
-						device: [0x00, 0x00, 0x00],
-						group: 0,
-						onLevel: 0,
-						rampRate: 0,
-						Type: {
-							control: AllLinkRecordType.Responder,
-							active: false,
-							highwater: true,
-							smartHop: 0
-						}
-					});
-					
-					console.log('after modding & pushing',nextLinkAddress, device.links[device.links.length-1].address, device?.links);
-				}
-			}
 		}
 
 		/* Process all CHANGED device links - should only be responder links which had a ramp/level setting change */
