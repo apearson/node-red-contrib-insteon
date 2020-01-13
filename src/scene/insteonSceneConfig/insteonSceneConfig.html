@@ -8,31 +8,747 @@
 		align: 'left',
 		defaults: {
 			modem: { value: '', type: 'insteon-modem-config' },
-			scene: { value: '' },
+			group: { value: '' },
 			name: { value: '' },
 		},
 		inputs: 0,
 		outputs: 0,
 		icon: 'light.png',
-		label: function(){ return this.name || 'Insteon Scene' }
+		label: function(){ return this.name || 'Insteon Scene' },
+		oneditsave: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
+		oneditcancel: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
+		oneditdelete: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
+		oneditprepare: function(){
+			let node = this;
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.scene = RED.nodes.getType("insteon-scene-config");
+			
+			/* setup the status event listener to display the node status to the user */
+			insteon.subscribeConfigStatus(node.id, insteon.configStatusHandler);
+
+			let plmAddress = RED.nodes.node(node.modem).address.toUpperCase();
+
+			/* Build the device lists */
+			insteon.buildDeviceSelectOptions('new-controller-device','');
+			insteon.buildDeviceSelectOptions('new-responder-device','');
+
+			/* render the links tables */
+			let groupMembers = insteon.scene.getGroupMembers(plmAddress, parseInt(node.group));
+			insteon.scene.renderLinksTable(groupMembers);
+			
+			/* Add controllers or responders */
+			$("#add-new-controller-device").click(function(e){
+				e.preventDefault();
+				insteon.scene.addDeviceClickHandler(true);
+			});
+
+			$("#add-new-responder-device").click(function(e){
+				e.preventDefault();
+				insteon.scene.addDeviceClickHandler();
+			});
+
+			/* setup the write config button */
+			$('.update-scene-config').click(function(){
+				$('.update-scene-config').addClass('disabled');
+				$('.update-scene-config').prop('disabled', true);
+			
+				insteon.postConfig({
+					url: 'insteon-scene-config',
+					data: insteon.scene.serializeConfig(node.id),
+					success: data => {
+						$('.update-scene-config').removeClass('disabled');
+						$('.update-scene-config').prop('disabled', false);
+
+						/* Update every device cache */
+						data.devices.forEach(d => {
+							let cache = insteon.device.readCache(d.address);
+							cache.links = d.links;
+							
+							insteon.device.writeCache(d.address,cache);
+						});
+						
+						/* Deploy to save the caches */
+						insteon.deployNR();
+					},
+					error: e => {
+						$('.update-scene-config').removeClass('disabled');
+						$('.update-scene-config').prop('disabled', false);
+
+						insteon.sendErrorToDebugConsole(node.id,`${e.responseJSON.message}: ${e.responseJSON.caught}`);						
+					}
+				});
+			});
+
+			/* Setting up settings accordion */
+			$('#accordion').accordion({heightStyle: 'fill'});
+		},
+		
+		addDeviceClickHandler: function(isController){
+			let type = isController ? 'controller' : 'responder';
+			
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			insteon.scene = RED.nodes.getType("insteon-scene-config");
+			
+			let deviceId = $(`#new-${type}-device`).val();
+			if($(`#${type}Links tr[data-config-node-id='${deviceId}']`).length){
+				alert(`The selected device is already a ${type} of this scene.`);
+				return;
+			}
+			
+			let deviceConfigNode = RED.nodes.node(deviceId);
+			let cache = insteon.device.readCache(deviceConfigNode.address);
+			let onLevel = 255;
+			let rampRate = 31;
+			if(!isController && cache.extendedConfig && Number.isInteger(cache.extendedConfig.rampRate) && Number.isInteger(cache.extendedConfig.onLevel)){
+				onLevel = cache.extendedConfig.onLevel;
+				rampRate = cache.extendedConfig.rampRate;
+			}
+			
+			let device = {
+				id: deviceConfigNode.id,
+				name: deviceConfigNode.name,
+				address: deviceConfigNode.address,
+				type: deviceConfigNode.type,
+				info: cache.info,
+				links: cache.links,
+				extendedConfig: cache.extendedConfig,
+			};
+			
+			let link = {
+				address: null,
+				group: null,
+				onLevel: onLevel,
+				rampRate: rampRate
+			}
+			
+			let newMember = [insteon.scene.makeSceneMember(device,link,isController)];
+						
+			insteon.scene.renderLinksTable(newMember);
+			$(`#${type}Links tr[data-config-node-id='${deviceId}']`).addClass('new');
+		},
+
+		/* Parse all device config nodes and their cache into an array of objects */
+		getDeviceList: function(){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			/* get all devices */
+			let deviceConfigNodes = [];
+			RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) !== null ? deviceConfigNodes.push(c) : '');
+
+			/* parse all device caches into a new object */
+			let devices = [];
+			deviceConfigNodes.forEach(deviceConfigNode => {
+				let cache = insteon.device.readCache(deviceConfigNode.address);
+				devices.push({
+					id: deviceConfigNode.id,
+					name: deviceConfigNode.name,
+					address: deviceConfigNode.address,
+					type: deviceConfigNode.type,
+					info: cache.info,
+					links: cache.links,
+					config: cache.config,
+					extendedConfig: cache.extendedConfig,
+				});
+			});
+			
+			return devices;
+		},
+
+		/* Search all devices and their links to find ones that are a member of this scene/group
+		 * 1. Get all devices which respond to the modem address on the specified scene/group #. These are the scene's responders.
+		 * 2. Make an array of scene responder addresses
+		 * 3. Find all devices which have controller records for ALL devices in the responder array (ignore group #)
+		 */
+		getGroupMembers: function(plmAddress, group){
+			retval = [];
+
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			insteon.scene = RED.nodes.getType("insteon-scene-config");
+			
+			/* Get all devices */
+			let devices = insteon.scene.getDeviceList();
+
+			/* get all devices which respond to the modem on the specified group number */
+			let responders = devices.filter(device => {
+				return device.links.find(link => {
+					return insteon.toAddressString(link.device) === plmAddress
+						&& link.group === group
+						&& !link.Type.control
+				});
+			}).map(device => {
+				let link = device.links.find(link => 
+					insteon.toAddressString(link.device) === plmAddress
+					&& link.group === group
+					&& !link.Type.control);
+
+				return insteon.scene.makeSceneMember(device,link,false);
+			});
+			
+			/* If there are no responders to this group#, there is no scene. */
+			if(responders.length === 0){
+				return [];
+			}
+
+
+			/* A scene/group controller is defined as any device which has a control link for *every* responder in the scene/group
+			 * 1. Start with complete device list
+			 * 2. Map the responder object array to a new array containing only the device addresses
+			 * 3. Take the device address array and check that every responder address is present in the device's link list as a controller
+			 * 4. map the filtered device list into a new scene member object
+			 */
+
+			let controllers = devices.filter(device => {
+				return responders.map(responder => 
+					responder.device.address
+				).every(responderAddress => {
+						return responderAddress === device.address
+						|| device.links.filter(link => link.Type.control).map(link => insteon.toAddressString(link.device)).indexOf(responderAddress) > -1
+					}
+				)
+			}).map(device => {
+				return insteon.scene.makeSceneMember(device, {}, true);
+			});
+
+			/* merge the controllers and responders into one array */
+			return retval.concat(responders,controllers);
+		},
+		
+		/* Helper function to create a scene member object from a device object and a specific device link object */
+		makeSceneMember: function(device,link,isController){
+			return {
+				device: {
+					id: device.id,
+					address: device.address,
+					name: device.name,
+					type: device.type,
+					links: device.links
+				},
+				link: {
+					responder: !isController,
+					controller: isController,
+					address: link.address,
+					group: link.group,
+					onLevel: link.onLevel,
+					rampRate: link.rampRate
+				}
+			}
+			
+		},
+		
+
+		// region rendering functions
+		renderLinksTable: function(groupMembers){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+
+			// Clearing links and address elements
+			// $('#controllerLinks, #responderLinks').empty();
+
+			// If no links then do nothing
+			if(groupMembers.length === 0)
+				return;
+
+			// For each device which is part of the group, and then for each of it's links, render a device row
+			groupMembers.forEach(member => {
+				let device = member.device;
+				let deviceConfigNode = insteon.getDeviceNode(device.address);
+				let deviceCell = $('<td>', { 'data-address': device.address, style:'white-space:nowrap' } );
+
+				if(deviceConfigNode === null){
+					deviceCell.addClass('unknownDevice');
+
+					$('<span/>')
+						.text(`${device.address}`)
+						.appendTo(deviceCell);
+				}else{
+					$('<a>', {
+						href: '#',
+						text: `${device.address}: ${deviceConfigNode.name}`,
+						click: function(e){
+							e.preventDefault();
+							RED.editor.editConfig('', deviceConfigNode.type, deviceConfigNode.id);
+						}
+					}).appendTo(deviceCell);
+				}
+				
+				if(member.link.controller){
+					// Creating device row to hold device info
+					const row = insteon.scene.renderControllerLinkRow(member, deviceCell);
+
+					// Appending device row to links table
+					row.appendTo($('#controllerLinks'));
+				}else{
+					const row = insteon.scene.renderResponderLinkRow(member, deviceCell);
+
+					// Appending device row to links table
+					row.appendTo($('#responderLinks'));
+				}
+			});
+		},
+
+		/* render a table row for renderLinksTable */
+		renderControllerLinkRow: function(controller, deviceCell){
+			/* import the JS functions from the modem & top level device config node */
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+
+			// Table row
+			let row = $('<tr/>', {'data-config-node-id': controller.device.id, 'data-device-address': controller.device.address, 'data-link-address': JSON.stringify(controller.link.address)});
+
+			// Device Column
+			deviceCell.appendTo(row);
+
+			// Action buttons
+			let actionCell = $('<td>', { style: `text-align: right; white-space:nowrap` });
+
+			// Delete link toggle button
+			insteon.scene.renderLinkDeleteButton('white-space:nowrap;','white-space:nowrap; text-decoration: line-through; color: #AAA').appendTo(actionCell);
+
+			actionCell.appendTo(row);
+
+			// Returning row
+			return row;
+		},
+
+		/* render a responder row for renderLinksTable
+		 */
+		renderResponderLinkRow: function(responder, deviceCell){
+			/* import the JS functions from the modem & top level device config node */
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+
+			let isDimmable = insteon.device.isDimmable(deviceCell.data('address'));
+
+			// Table row
+			let row = $('<tr/>', {
+				'data-config-node-id': responder.device.id,
+				'data-device-address': responder.device.address,
+				'data-link-address': JSON.stringify(responder.link.address),
+				'data-onLevel': responder.link.onLevel,
+				'data-rampRate': responder.link.rampRate
+			});
+
+			// Device Column
+			deviceCell.appendTo(row);
+
+			// On Level Column
+			let onLevelCell = $('<td>', { style: 'white-space:nowrap' })
+				.appendTo(row);
+
+			let onLevelSelect = $('<select>', {'data-initial': responder.link.onLevel, class: 'responderOnLevel', style: 'width: 5em'}).appendTo(onLevelCell);
+
+			if(isDimmable){
+				for(var i = 0; i<=100; i++){
+					$('<option>',{
+						value: i,
+						selected: i === Math.round(responder.link.onLevel / 255 * 100)
+					}).text(`${i}%`).appendTo(onLevelSelect);
+				}
+			}else{
+				$('<option>',{ value: 0, selected: responder.link.onLevel === 0}).text("Off").appendTo(onLevelSelect);
+				$('<option>',{ value: 100, selected: responder.link.onLevel !== 0}).text("On").appendTo(onLevelSelect);
+			}
+
+			// Ramp Rate Column
+			let rampCell = $('<td>', { style: 'white-space:nowrap' })
+				.appendTo(row);
+
+			let rampSelect = $('<select>', {'data-initial': responder.link.rampRate, class: 'responderRampRate', style: 'width: 6.5em', disabled: !isDimmable}).appendTo(rampCell);
+			insteon.device.rampRates.forEach((e,i) => {
+				$('<option>', {
+					value: i,
+					selected: i === 31 - responder.link.rampRate
+				}).text(e).appendTo(rampSelect);
+			});
+
+			// Action buttons
+			let actionCell = $('<td>', { style: `text-align: right; white-space:nowrap` });
+
+			// Delete link toggle button
+			insteon.scene.renderLinkDeleteButton('white-space:nowrap;','white-space:nowrap; text-decoration: line-through; color: #AAA').appendTo(actionCell);
+
+			actionCell.appendTo(row);
+
+			// Returning row
+			return row;
+		},
+
+		/* render the delete button that sits in each link row */
+		renderLinkDeleteButton: function(activeCss,deletedCss){
+			let button = $('<button>',{
+				class: 'btn delete',
+				click: function(e){
+
+					let tr = $(this).closest('tr');
+					
+					// If this a newly added link, just remove it.
+					if(tr.hasClass('new')){
+						tr.remove();
+						return;
+					}
+
+					if(tr.hasClass('toBeDeleted')){
+						// Unflag for deletion
+						tr.removeClass('toBeDeleted');
+
+						// Update row style
+						tr.find('td').each(function(i,td){
+							td.style = activeCss;
+						});
+
+						// The last cell style is aligned right
+						tr.find('td').last().css('text-align','right')
+					}else if(confirm('Flag link for deletion?')){
+						// Flag for deletion
+						tr.addClass('toBeDeleted');
+
+						// Update row style
+						tr.find('td').each(function(i,td){
+							td.style = deletedCss;
+						});
+
+						// The last cell style is aligned right
+						tr.find('td').last().css('text-align','right');
+					}
+				}
+			}).html("&times;");
+
+			return button;
+		},
+
+		//#region ajax config functions
+		
+		/* 
+		 * Assemble an object containing all data needed to make an ajax request that will update a scene's configuration
+		 * Calculates each link for each device in the scene which must be added, changed or removed
+		 * The data must be JSON serialized in order for it to be properly posted by postConfig and decoded by the server
+		 */
+		serializeConfig: function(sceneConfigNodeId){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			insteon.scene = RED.nodes.getType("insteon-scene-config");
+			
+			let group = parseInt($("#node-config-input-group").val());
+			let plmConfigNode = $("#node-config-input-modem").val();
+			let plmAddress = RED.nodes.node($("#node-config-input-modem").val()).address;
+			
+			let data = {
+				plmConfigNode,
+				sceneConfigNodeId,
+				groupMembers: [],
+				plmLinksToAdd: [], plmLinksToDelete: [],
+				deviceLinksToAdd: [], deviceLinksToDelete: [], deviceLinksToUpdate: []
+			};
+			
+			/* Build an array containing the device address for everything in the group so that the server can create device instances for each */
+			$("#controllerLinks tr, #responderLinks tr").each((i,tr) => {
+				if(!data.groupMembers.find(d => d.address === $(tr).data('device-address'))){
+					data.groupMembers.push({ address: $(tr).data('device-address'), description: $(tr).find("td a").text() });
+				}
+			});
+			
+			let devices = insteon.scene.getDeviceList();
+			
+			/* New Responders */
+			$("#responderLinks tr.new").each((i,tr) => {
+				let deviceAddress = $(tr).data('device-address');
+				let onLevel = Math.round(parseInt($(tr).find('select.responderOnLevel').val()) / 100 * 255); // convert 0-100 to 0-255
+				let rampRate = 31 - parseInt($(tr).find('select.responderRampRate').val()); // insteon ramp rates are backward
+				
+				/* For each new responder device, we have to add a control record for the modem and a corresponding respond record on the device */
+				data.plmLinksToAdd.push({
+					deviceAddress,
+					group,
+					onLevel: 255,
+					rampRate: 31,
+					controller: true
+				});
+				
+				data.deviceLinksToAdd.push({
+					deviceAddress,
+					foreignAddress: plmAddress,
+					group,
+					onLevel,
+					rampRate,
+					controller: false
+				});
+				
+				/* Now for each controller of the scene, we have to add a control record for the controlling device and a corresponding respond record for the new responder
+				 * It's possible that the devices already have a peer to peer link, so we have to check the device cache and only create the record if there is no pre-existing link
+				 */
+				$("#controllerLinks tr").not(".toBeDeleted").each((i,tr) => {
+					let controllerDeviceAddress = $(tr).data('device-address');
+					let controllerDeviceButton = 1; // ToDo figure out how to pass the correct button #. For now hard code to button 1
+					if(controllerDeviceAddress === deviceAddress){ return; }
+					
+					/* Check to see if the controller device already has a link for this foreign device on this button */
+					if(!devices.find(d => d.address === controllerDeviceAddress && d.links.find(l => l.group === controllerDeviceButton && l.device === deviceAddress && l.Type.control))){
+						data.deviceLinksToAdd.push({
+							deviceAddress: controllerDeviceAddress,
+							foreignAddress: deviceAddress,
+							group: controllerDeviceButton, 
+							onLevel: 255,
+							rampRate: 31,
+							controller: true
+						});						
+					}
+
+					/* Check to see if the responding device already has a link for this foreign device on this button */
+					if(!devices.find(device => device.address === deviceAddress && device.links.find(link => link.group === controllerDeviceButton && link.device === controllerDeviceAddress && !link.Type.control))){
+						data.deviceLinksToAdd.push({
+							deviceAddress,
+							foreignAddress: controllerDeviceAddress,
+							group: controllerDeviceButton,
+							onLevel,
+							rampRate,
+							controller: false
+						
+						});
+					}
+				});
+			});
+			
+			/* New Controllers */
+			$("#controllerLinks tr.new").each((i,tr) => {
+				let deviceAddress = $(tr).data('device-address');
+				let deviceButton = 1; // ToDo figure out how to pass the correct button #. For now hard code to button 1
+				let onLevel = 255;
+				let rampRate = 31;
+
+				/* For each new controller device, we have to add control records for the pre-existing scene responders.
+				 * This new controller got control links added for new scene responders in the previous step, so skip new responders.
+				 */
+				$("#responderLinks tr").not(".toBeDeleted, .new").each((i,tr) => {
+					let responderDeviceAddress = $(tr).data('device-address');
+					if(responderDeviceAddress === deviceAddress){ return; }
+					
+					/* Check to see if the new controller device already has a control link for the foreign device */
+					if(!devices.find(d => d.address === deviceAddress && d.links.find(l => l.group === deviceButton && l.device === responderDeviceAddress && link.Type.control))){
+						data.deviceLinksToAdd.push({
+							deviceAddress: deviceAddress,
+							foreignAddress: responderDeviceAddress,
+							group: deviceButton,
+							onLevel: 255,
+							rampRate: 31,
+							controller: true
+						});
+					}
+					
+					/* The responder devices also must have a responder link for the new controller */
+					if(!devices.find(d => d.address === responderDeviceAddress && d.links.find(l => l.group === deviceButton && l.device === deviceAddress && !link.Type.control))){
+						let responderOnLevel = Math.round(parseInt($(tr).find('select.responderOnLevel').val()) / 100 * 255); // convert 0-100 to 0-255
+						let responderRampRate = 31 - parseInt($(tr).find('select.responderRampRate').val()); // insteon ramp rates are backward
+						
+						data.deviceLinksToAdd.push({
+							deviceAddress: responderDeviceAddress,
+							foreignAddress: deviceAddress,
+							group: deviceButton,
+							onLevel: responderOnLevel,
+							rampRate: responderRampRate,
+							controller: false
+						});
+					}
+				});				
+			});
+
+			/* Changed responders
+			 * For now, only change the PLM responder link. Changing the responder link for every controller of the scene is the other option.
+			 * Changing all responder links might be more convienient in case you want a device to always go to the scene's on level, but it's less flexible
+			 * because an advanced setup might have a device respond differently depending on which scene controller activated it.
+			 * To have the best of both worlds, add a warning button saying that not all responders match the PLM link, and ask the user if they want to sync them?
+			 */
+			$("#responderLinks tr").not(".toBeDeleted, .new").each((i,tr) => {
+				let deviceAddress = $(tr).data('device-address');
+				let linkAddress = $(tr).data('linkAddress');
+				
+				let onLevel = Math.round(parseInt($(tr).find('select.responderOnLevel').val()) / 100 * 255); // convert 0-100 to 0-255
+				let initialOnLevel = $(tr).find('select.responderOnLevel').data('initial');
+				let rampRate = 31 - parseInt($(tr).find('select.responderRampRate').val()); // insteon ramp rates are backward
+				let initialRampRate = $(tr).find('select.responderRampRate').data('initial');
+				
+				if(onLevel !== initialOnLevel || rampRate !== initialRampRate){
+					data.deviceLinksToUpdate.push({
+						linkAddress,
+						deviceAddress,
+						foreignAddress: plmAddress,
+						group: group,
+						controller: false,
+						onLevel,
+						rampRate
+					});
+				}
+			});
+			
+			/* deletedLinks: When a controller devices is removed from a scene, we have to delete all of the controller
+			 * records from the device which match one of the scene's responders. Then we have to delete all the responder links for this device 
+			 * from the responder devices.
+			 */
+			$("#controllerLinks tr.toBeDeleted").each((i,tr) => {
+				let deletedDeviceAddress = $(tr).data("device-address");
+				let deletedDeviceButton = 1; // ToDo figure out how to incorporate the correct button/group#
+				let deletedDevice = devices.find(d => d.address === deletedDeviceAddress);
+
+				/* To figure out which controller links to delete, look through all scene responders */
+				$("#responderLinks tr").not(".new").each((i,tr) => {
+					let responderDeviceAddress = $(tr).data('device-address');
+					if(responderDeviceAddress === deletedDeviceAddress){ return; }
+
+					/* find all control records on the deleted device which match one of the scene's responders */
+					deletedDevice.links.filter(l => l.group === deletedDeviceButton && l.Type.control && insteon.toAddressString(l.device) === responderDeviceAddress).forEach(link => {
+						data.deviceLinksToDelete.push({
+							deviceAddress: deletedDeviceAddress,
+							linkAddress: link.address,
+							foreignAddress: insteon.toAddressString(link.device),
+							controller: true
+						});
+					});
+				});
+
+				/* Next find all responder links on all other devices for this deleted controller & button */
+				$("#responderLinks tr").not(".new").each((i,tr) => {
+					let responderDeviceAddress = $(tr).data('device-address');
+					let responderDevice = devices.find(d => d.address === responderDeviceAddress);
+
+					responderDevice.links.filter(l => insteon.toAddressString(l.device) === deletedDeviceAddress && l.group === deletedDeviceButton && !l.Type.control).forEach(link => {
+						data.deviceLinksToDelete.push({
+							deviceAddress: responderDeviceAddress,
+							linkAddress: link.address,
+							foreignAddress: insteon.toAddressString(link.device),
+							controller: false
+						});
+					});
+				});
+			});
+
+			/* When a responder device is removed from the scene, remove the responder links from the device
+			 * then remove the controller links from all other devices
+			 */
+			$("#responderLinks tr.toBeDeleted").each((i,tr) => {
+				let deletedDeviceAddress = $(tr).data("device-address");
+				let deletedDevice = devices.find(d => d.address === deletedDeviceAddress);
+				let deletedDeviceLinkAddress = $(tr).data("link-address");
+
+				/* Remove the device control link from the PLM */
+				data.plmLinksToDelete.push({
+					deviceAddress: deletedDeviceAddress,
+					group
+				});
+
+				/* Remove the device's responder link for the PLM on the plm group */
+				data.deviceLinksToDelete.push({
+					deviceAddress: deletedDeviceAddress,
+					linkAddress: deletedDeviceLinkAddress,
+					foreignAddress: plmAddress,
+					controller: false
+				});
+
+				/* For each controller device of this scene, delete the control link for this deleted device. */
+				$("#controllerLinks tr").not(".toBeDeleted, .new").each((i,tr) => {
+					let controllerDeviceAddress = $(tr).data('device-address');
+					let controllerDeviceButton = 1; // ToDo figure out how to incorporate the correct button/group#
+					let controllerDevice = devices.find(d => d.address === controllerDeviceAddress);
+					let responderLink = deletedDevice.links.find(l => insteon.toAddressString(l.device) === controllerDeviceAddress && l.group === controllerDeviceButton && !l.Type.control);
+
+					controllerDevice.links.filter(l => insteon.toAddressString(l.device) === deletedDeviceAddress && l.group === controllerDeviceButton && l.Type.control).forEach(l => {
+						data.deviceLinksToDelete.push({
+							deviceAddress: controllerDeviceAddress,
+							linkAddress: l.address,
+							foreignAddress: deletedDeviceAddress,
+							controller: true
+						});
+					});
+
+					/* Delete the corresponding responder links	from the deleted device */
+					data.deviceLinksToDelete.push({
+						deviceAddress: deletedDeviceAddress,
+						linkAddress: responderLink.address,
+						foreignAddress: controllerDeviceAddress,
+						controller: false
+					});
+				});
+
+			});
+			
+			return JSON.stringify(data);
+		},
+				
+		//#end region
+		
 	});
 
 </script>
 
 <!-- Node Configuration -->
 <script type="text/x-red" data-template-name="insteon-scene-config">
-	<div class="form-row">
-		<label for="node-config-input-modem">Insteon Modem</label>
-		<input type="text" id="node-config-input-modem" placeholder="/dev/usb123">
-  </div>
-  <div class="form-row">
-		<label for="node-config-input-scene">Insteon Scene Number</label>
-		<input type="number" id="node-config-input-scene">
+	
+	<div class='form-row'>
+		<label for='node-config-input-modem'>Insteon Modem</label>
+		<input type='text' id='node-config-input-modem' placeholder='/dev/usb123'>
 	</div>
-	<div class="form-row">
-		<label for="node-config-input-name"><i class="icon-tag"></i> Name</label>
-		<input type="text" id="node-config-input-name" placeholder="Name">
-  </div>
+	<div class='form-row'>
+		<label for='node-config-input-group'>Insteon Scene Number</label>
+		<input type='number' id='node-config-input-group' disabled='true'>
+	</div>
+	<div class='form-row'>
+		<label for='node-config-input-name'><i class='icon-tag'></i> Name</label>
+		<input type='text' id='node-config-input-name' placeholder='Name'>
+	</div>
+
+	<div class='form-row' style='height: 500px'>
+  
+		<div id='accordion'>
+			<h3>Controllers</h3>
+			<div>
+				<p>Devices which will control this scene</p>
+				<select id='new-controller-device'></select>
+				<button class='btn' id='add-new-controller-device'>Add Controller</button>
+		  
+				<table width='100%'>
+					<thead>
+						<tr>
+							<th style='text-align: left;'>Device</th>
+							<th style='text-align: left;'>&nbsp;</th>
+						</tr>
+					</thead>
+					<tbody id='controllerLinks'>
+					</tbody>
+				</table>
+				
+				<div class="red-ui-tray-toolbar">
+					<button class="update-scene-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to All Devices</button>
+					<div class="insteon-status" style="text-align: left;"></div>
+				</div>		
+			</div>
+	  
+			<h3>Responders</h3>
+			<div>
+				<p>All devices which will respond to the controllers of this scene</p>
+				<select id='new-responder-device'></select>
+				<button class='btn' id='add-new-responder-device'>Add Responder</button>
+			
+				<table width='100%'>
+					<thead>
+						<tr>
+							<th style='text-align: left;'>Device</th>
+							<th style='text-align: left;'>On Level</th>
+							<th style='text-align: left;'>Ramp Rate</th>
+							<th style='text-align: left;'>&nbsp;</th>
+						</tr>
+					</thead>
+					<tbody id='responderLinks'>
+					</tbody>
+				</table>
+
+				<div class="red-ui-tray-toolbar">
+					<button class="update-scene-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to All Devices</button>
+					<div class="insteon-status" style="text-align: left;"></div>
+				</div>					
+			</div>
+		</div> <!-- end accordion -->
+	</div>
 </script>
 
 <!-- Help Panel -->

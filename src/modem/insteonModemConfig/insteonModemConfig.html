@@ -1,258 +1,534 @@
 <!-- Node Registration -->
 <script type='text/javascript'>
-
-	//#region Data Methods
-
-	const getInsteonPorts = (success, error) => {
-		$.ajax({
-			method: 'GET',
-			dataType: "JSON",
-			url: 'insteon-ports',
-			success,
-			error
-		});
-	}
-
-	const getModemLinks = (id, success, error) => {
-		$.ajax({
-			method: 'GET',
-			dataType: "JSON",
-			url: 'insteon-plm-getlinks?id=' + id,
-			success,
-			error
-		});
-	}
-
-	const manageDevice = (id, address, action, success, error) => {
-		$.ajax({
-			method: 'post',
-			dataType: 'json',
-			url: 'insteon-plm-manage-device',
-			data: { id, action, address },
-			success,
-			error,
-		});
-	}
-
-	//#endregion
-
-	//#region Render Methods
-
-	const renderInsteonPorts = (ports) => {
-		// Auto complete config
-		let autoConfig = {
-			source: ports.map(_ => _.comName),
-			minLength: 0,
-			close: () => $('#node-config-input-path').autocomplete( 'destroy' )
-		};
-
-		// Creating autocomplete
-		$('#node-config-input-path')
-			.autocomplete(autoConfig)
-			.autocomplete('search', '');
-	}
-
-	/* Render an HTML table containing all of the link data from the modem
-	 * In parallel, render the select drop down in the remove device panel
-	 */
-	const renderLinksTable = (links) => {
-
-		// If no links then do nothing
-		if(links.length === 0)
-			return;
-
-		// Getting all device config nodes
-		let devices = [];
-		RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : '');
-
-		// Hiding links hint for no PLM
-		$('#linkMessage').hide();
-
-		// Clearing links and address elements
-		$('#links').empty();
-		$('#device_address_to_remove').empty();
-
-		// Sorting links by group
-		links = links.sort((a, b) => a.group > b.group ? 1 : b.group > a.group ? -1 : 0)
-		             .sort((a, b) => a.type === b.type ? 0 : a.type < b.type ? 1 : -1);
-
-		// For each link in PLM render a device row
-		links.forEach(link => {
-			// Get the linked device's configuration node, if there is one
-			let deviceConfigNode = getDeviceNode(link.device);
-
-			/* Create the table cell for the device. If the device has a config node,
-				make it a clickable link to take the user to the edit panel for the
-				deviceConfig node.
-			*/
-			let deviceCell = $('<td>', { style:'white-space:nowrap' } );
-
-			if(deviceConfigNode === null){
-				deviceCell.text(`${addressToString(link.device)}`);
-			}
-			else{
-				$('<a>', {
-					href: '#',
-					html: `${addressToString(link.device)}: ${deviceConfigNode.name}`,
-					click: function(e){
-						e.preventDefault();
-						RED.editor.editConfig('', 'insteon-device-config', deviceConfigNode.id);
-					}
-				}).appendTo(deviceCell);
-			}
-
-			// Creating device row to hold device info
-			const row = renderDeviceRow(link, deviceCell);
-
-			// Appending device row to links table
-			row.appendTo($('#links'));
-
-			// Option text will be device id or device name
-			let optionText = deviceConfigNode === null ? addressToString(link.device)
-			                                           : `${addressToString(link.device)}: ${deviceConfigNode.name}`;
-
-			// Populate the select options in the remove device drop down with option text
-			$('<option/>', {
-				value: `${addressToString(link.device)}`,
-				html: optionText
-			}).appendTo($('#device_address_to_remove'));
-
-		});
-	}
-
-	const renderDeviceRow = (link, deviceCell) => {
-		// Table row
-		let row = $('<tr/>');
-
-		// Record Type Column
-		$('<td>', { style:'white-space:nowrap' })
-			.text(link.type === 1 ? 'Controller' : 'Responder')
-			.appendTo(row);
-
-		// Device Column
-		deviceCell.appendTo(row);
-
-		// Group Column
-		$('<td>', { style:'white-space:nowrap' })
-			.text(link.group)
-			.appendTo(row);
-
-		// Blank Column
-		$('<td>', { style:'white-space:nowrap' })
-			.text('')
-			.appendTo(row);
-
-		// Returning row
-		return row;
-	}
-
-	//#endregion
-
-	//#region Manage Methods
-
-	/* Add New Insteon Device */
-	const submitAddress = (node, action, address) => {
-		$('#add_device,#remove_device').prop('disabled', true);
-
-		manageDevice(node.id, address, action,
-			data => {
-				$('#add_device,#remove_device').prop('disabled', false);
-
-				if(data.error){
-					sendErrorToDebugConsole(node.id,data.message);
-					return;
-				}
-
-				alert(data.message);
-
-				$('#new_device_address').val('');
-				renderLinksTable(data.links);
-			},
-			e => {
-				$('#add_device,#remove_device').prop('disabled', false);
-
-				sendErrorToDebugConsole(node.id,error);
-			}
-		);
-	}
-
-	//#endregion
-
-	//#region Utility Methods
-
-	/* Make a hex string for a Byte array */
-	const addressToString = (address) => {
-		return address.map(num => num.toString(16).toUpperCase().padStart(2, '0')).join('.');
-	}
-
-	/* Lookup the device node and return it based on an insteon device address */
-	const getDeviceNode = (address) => {
-
-		let devices = [];
-
-		RED.nodes.eachConfig(c => c.type === 'insteon-device-config' ? devices.push(c) : null);
-
-		return devices.find(d =>
-			parseInt(d.address1, 16) === address[0] &&
-			parseInt(d.address2, 16) === address[1] &&
-			parseInt(d.address3, 16) === address[2]
-		) || null;
-	}
-
-	/* This is not conventional, but we need a way to output error messages to the debug window in case the ajax call fails
-	 * node.error() is not in context for ajax calls
-	 */
-	const sendErrorToDebugConsole = (name, message) =>
-		RED.debug.handleDebugMessage({ name:name,msg:message, level: 20 });
-
-	//#endregion
-
-	//#region Lifecycle Methods
-
-	const oneditprepare = (node) => {
-
-		/* PLM Path UI */
-		try { $('#node-config-input-path').autocomplete( 'destroy' ); }
-		catch(err) { }
-
-		// Setting up lookup button
-		$('#node-config-lookup-modems').click(_ =>
-			getInsteonPorts(renderInsteonPorts, e => sendErrorToDebugConsole(node.id, e))
-		);
-
-		// Setting up settings acordiion
-		$('#accordion').accordion({heightStyle: 'fill'});
-
-		/* PLM links table */
-		getModemLinks(node.id, renderLinksTable, e => sendErrorToDebugConsole(node.id, e));
-
-		/* Add device UI */
-		$('#add_device').click(e => {
-			e.preventDefault();
-			submitAddress(this, 'addNewDevice', $('#new_device_address').val());
-		});
-
-		/* Remove device UI */
-		$('#remove_device').click(e => {
-			e.preventDefault();
-			submitAddress(this, 'removeDevice', $('#device_address_to_remove').val());
-		});
-	}
-
-	//#endregion
-
 	/** Type Registration **/
 	RED.nodes.registerType('insteon-modem-config',{
 		category: 'config',
 		defaults: {
-			path: { value: '', required: true }
+			path: { value: '', required: true },
+			name: { value: '' },
+			address: { value: '', required: true, validate: function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
 		},
-		oneditprepare: function(){ return oneditprepare(this); },
 		label: function(){
 			return this.path || 'Insteon Modem'
-		}
-	});
+		},
+		oneditprepare: function(){
+			let node = this;
+			let insteon = RED.nodes.getType("insteon-modem-config");
 
+			/* setup the status event listener to display the node status to the user */
+			insteon.subscribeConfigStatus(node.id, insteon.configStatusHandler);
+			
+			/* PLM Path UI */
+			try { $('#node-config-input-path').autocomplete( 'destroy' ); }
+			catch(err) { }
+
+			/* Setting up lookup button */
+			$('#node-config-lookup-modems').click(_ =>
+				insteon.getInsteonPorts(insteon.renderInsteonPorts, e => insteon.sendErrorToDebugConsole(node.id, e))
+			);
+
+			/* Setting up accordion */
+			$('#accordion').accordion({heightStyle: 'fill'});
+
+			/* PLM links table */
+			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => insteon.sendErrorToDebugConsole(node.id, e));	
+
+			/* Add device UI */
+			$('#add-device').click(e => {
+				e.preventDefault();
+				insteon.submitAddress(node, 'addNewDevice', $('#new-device-address').val());
+			});
+			
+			$('#add-scene').click(e => {
+				e.preventDefault();
+				
+				let newNode = {
+					id: RED.nodes.id(),
+					_def: RED.nodes.getType('insteon-scene-config'),
+					type: 'insteon-scene-config',
+					users: [],
+					modem: node.id,
+					group: $("#next-scene-number").val(),
+					name: $('#new-scene-name').val()
+				}
+				
+				RED.nodes.add(newNode);
+				
+				insteon.deployNR();
+				
+				setTimeout(() => {
+					RED.editor.editConfig('', 'insteon-scene-config', newNode.id);
+				}, 500);
+			});
+
+			/* Remove device UI */
+			$('#remove-device').click(e => {
+				e.preventDefault();
+				insteon.submitAddress(node, 'removeDevice', $('#device-address-to-remove').val());
+			});
+		},
+    
+		//# Region Static methods, any of which MAY BE USED BY ANOTHER NODE in the node-red-contrib-insteon package
+		
+		//#region Manage Methods		
+		
+		/* This is not conventional, but we need a way to output error messages to the debug window in case the ajax call fails
+		 * node.error() is not in context for ajax calls
+		 */
+		sendErrorToDebugConsole: function(name, message){
+			$("#red-ui-tab-debug-link-button").click();
+			RED.debug.handleDebugMessage({ name:name,msg:message, level: 20 });
+		},
+		
+		deployNR: function(){
+			/* Trigger a deploy to save the cache. This is necessary to prevent the UI from going out of sync with the hardware */
+			$("#node-config-dialog-ok").click();
+			$("#red-ui-header-button-deploy-icon").click();
+		},
+		
+
+		/* Submit an Insteon Device address for adding or removing the link from the PLM */
+		submitAddress: function(node, action, address){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			$('#add-device,#remove-device').prop('disabled', true);
+
+			insteon.manageDevice(node.id, address, action,
+				data => {
+					$('#add-device,#remove-device').prop('disabled', false);
+				
+					// Create the config node
+					if(data.action === 'addNewDevice'){
+						// Only create the node if it doesn't exist already
+						if(insteon.getDeviceNode(address) === null){
+							let newNode = {
+								id: RED.nodes.id(),
+								_def: RED.nodes.getType(data.configNodeType),
+								type: data.configNodeType,
+								users: [],
+								modem: node.id,
+								address: address,
+								name: $('#new-device-name').val(),
+								cache: JSON.stringify(data.deviceCache)
+							}
+							RED.nodes.add(newNode);
+						}
+
+					// Remove the config node
+					}else if(data.action === 'removeDevice'){
+						let existingNode = insteon.getDeviceNode(address);
+						if(existingNode !== null){
+							RED.nodes.remove(existingNode.id);
+						}
+					}
+
+					alert(data.message);
+
+					$('#new-device-address').val('');
+					$('#new-device-name').val('');
+					insteon.renderLinksTable(data.links);
+				},
+				e => {
+					$('#add-device,#remove-device').prop('disabled', false);
+
+					insteon.sendErrorToDebugConsole(node.id,`${e.responseJSON.message}: ${e.responseJSON.caught}`);
+				}
+			);
+		},
+
+		//#endregion
+
+		//#region Render Methods
+
+		renderInsteonPorts: function(ports){
+			// Auto complete config
+			let autoConfig = {
+				source: ports.map(_ => _.comName),
+				minLength: 0,
+				close: () => $('#node-config-input-path').autocomplete( 'destroy' )
+			};
+
+			// Creating autocomplete
+			$('#node-config-input-path')
+				.autocomplete(autoConfig)
+				.autocomplete('search', '');
+		},
+
+		/* Render an HTML table containing all of the link data from the modem
+		 * In parallel, render the select drop down in the remove device panel
+		 * and calculate the next available scene number
+		 */
+		renderLinksTable: function(links){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			// If no links then do nothing
+			if(links.length === 0)
+				return;
+
+			// Hiding links hint for no PLM
+			$('#linkMessage').hide();
+
+			// Clearing links and address elements
+			$('#links').empty();
+			$('#device-address-to-remove').empty();
+
+			// Sorting links by group
+			links = links.sort((a, b) => a.type > b.type ? 1 : a.group > b.group ? 1 : b.group > a.group ? -1 : 0);
+
+			// For each link in PLM render a device row
+			links.forEach(link => {
+			
+				// Get the linked device's configuration node, if there is one
+				let deviceConfigNode = insteon.getDeviceNode(insteon.toAddressString(link.device));
+
+				/* Create the table cell for the device. If the device has a config node,
+					make it a clickable link to take the user to the edit panel for the
+					deviceConfig node.
+				*/
+				let deviceCell = $('<td>', { style:'white-space:nowrap' } );
+
+				if(deviceConfigNode === null){
+					$('<a>', {
+						href: '#',
+						html: `${insteon.toAddressString(link.device)}: Add &raquo;`,
+						click: function(e){
+							e.preventDefault();
+							// Switch to the add new device panel in the accordion
+							$("#new-device-address").val(insteon.toAddressString(link.device));
+							$("#new-device-name").focus();
+							$("#accordion").accordion( "option", "active", 1);
+						}
+					}).appendTo(deviceCell);
+				}
+				else{
+					$('<a>', {
+						href: '#',
+						html: `${insteon.toAddressString(link.device)}: ${deviceConfigNode.name}`,
+						click: function(e){
+							e.preventDefault();
+							RED.editor.editConfig('', deviceConfigNode.type, deviceConfigNode.id);
+						}
+					}).appendTo(deviceCell);
+				}
+				/* End device cell */
+
+				/* create a clickable link for insteon scene/group */
+				let sceneConfigNode = insteon.getSceneNode(link.group);
+				let sceneCell = $('<td>', { style:'white-space:nowrap' });
+				
+				if(link.group === 1){
+					$('<a>', {
+						text: link.group,
+						click: function(e){
+							e.preventDefault();
+						}
+					}).appendTo(sceneCell);
+				}else if(sceneConfigNode === null){
+					$('<a>', {
+						href: '#',
+						html: `${link.group}: Add &raquo;`,
+						click: function(e){
+							e.preventDefault();
+							// Switch to the add new scene panel in the accordion
+							$("#next-scene-number").val(link.group);
+							$("#new-scene-name").focus();
+							$("#accordion").accordion( "option", "active", 3);
+						}
+					}).appendTo(sceneCell);
+				}else{
+					$('<a>', {
+						href: '#',
+						html: `${link.group}: ${sceneConfigNode.name}`,
+						click: function(e){
+							e.preventDefault();
+							RED.editor.editConfig('', sceneConfigNode.type, sceneConfigNode.id);
+						}
+					}).appendTo(sceneCell);
+				}
+				/* End scene cell */
+				
+				
+
+				// Creating device row to hold device info
+				const row = insteon.renderDeviceRow(link, deviceCell, sceneCell);
+
+				// Appending device row to links table
+				row.appendTo($('#links'));
+
+				// Option text will be device id or device name
+				let optionText = deviceConfigNode === null ? insteon.toAddressString(link.device)
+				                                           : `${insteon.toAddressString(link.device)}: ${deviceConfigNode.name}`;
+
+				// Populate the select options in the remove device drop down with option text
+				$('<option/>', {
+					value: `${insteon.toAddressString(link.device)}`,
+					html: optionText
+				}).appendTo($('#device-address-to-remove'));
+
+			});
+			
+			/* calculate next scene number */
+			let nextGroupNumber = 0;
+			let groupNumbers = links.map(l => parseInt(l.group));
+			groupNumbers.sort();
+
+			for (var i = 2; i < 255; i++) {
+				if ($.inArray(i, groupNumbers) === -1) {
+					nextGroupNumber = i;
+					break;
+				}
+			}
+			
+			/* Update the input for new scene # */
+			$("#next-scene-number").val(nextGroupNumber);
+			
+		},
+		
+		/* render a table row for renderLinksTable */
+		renderDeviceRow: function(link, deviceCell, sceneCell){
+			// Table row
+			let row = $('<tr/>');
+
+			// Record Type Column
+			$('<td>', { style:'white-space:nowrap' })
+				.text(link.type === 1 ? 'Controller' : 'Responder')
+				.appendTo(row);
+
+			// Device Column
+			deviceCell.appendTo(row);
+
+			// Scene Column
+			sceneCell.appendTo(row);
+			
+			// $('<td class="group">', { style:'white-space:nowrap' })
+			// 	.text(link.group)
+			// 	.appendTo(row);
+
+			// Blank Column
+			$('<td>', { style:'white-space:nowrap' })
+				.text('')
+				.appendTo(row);
+
+			// Returning row
+			return row;
+		},
+				
+		//#endregion		
+
+		//#region Data Methods
+
+		getInsteonPorts: function(success, error){
+			$.ajax({
+				method: 'GET',
+				dataType: "JSON",
+				url: 'insteon-ports',
+				success,
+				error
+			});
+		},
+
+		getModemLinks: function(id, success, error){
+			$.ajax({
+				method: 'POST',
+				dataType: "JSON",
+				url: 'insteon-plm-getlinks',
+				data: { id },
+				success,
+				error
+			});
+		},
+
+		manageDevice: function(id, address, action, success, error){
+			$.ajax({
+				method: 'POST',
+				dataType: 'JSON',
+				url: 'insteon-plm-manage-device',
+				data: { id, action, address },
+				success,
+				error,
+			});
+		},
+		
+		/* Universal post config method for devices and scenes */
+		postConfig: function(args){
+			$.ajax({
+				method: 'POST',
+				dataType: 'JSON',
+				contentType: 'application/json',
+				url: args.url,
+				data: args.data,
+				success: args.success,
+				error: args.error,
+			});
+		},
+		
+		/* Subscribe / unsubscribe from the NR websocket status updates for a node */
+		subscribeConfigStatus: function(nodeId,handler){
+			// console.log(`subscribe ${nodeId}`);
+			RED.comms.subscribe(`status/${nodeId}`,handler);
+		},
+		
+		unsubscribeConfigStatus: function(nodeId,handler){
+			// console.log(`UNsubscribe ${nodeId}`);
+			RED.comms.unsubscribe(`status/${nodeId}`,handler);
+		},
+
+		configStatusHandler: function(topic,msg){
+			// console.log(`configStatusHandler `,topic,msg);
+			
+			switch(msg.fill){
+				case 'red':    msg.fill = '#cc0000'; break;
+				case 'green':  msg.fill = '#55aa88'; break;
+				case 'yellow': msg.fill = '#F9DF31'; break;
+				case 'blue':   msg.fill = '#53A3F3'; break;
+				case 'grey':   msg.fill = '#d3d3d3'; break;
+			}
+			
+			let shape = `background-color: ${msg.fill};`;
+			if(msg.shape === 'ring'){
+				shape = `border-color: ${msg.fill}; border-width: 2px;`
+			}
+
+			let container = $(".insteon-status");
+			container.css('margin-top','5px');
+			container.empty();
+
+			let rect = $("<div/>",{style: `margin-right: 4px; height: 14px; width: 14px; float: left; border-radius: 3px; ${shape}`});
+			let text = $("<span/>",{text: msg.text, style: "position: relative; top: -2px"});
+
+			rect.appendTo(container);
+			text.appendTo(container);
+		},
+		
+
+		//#endregion
+		
+		//#region Utility Methods
+		
+		/* Lookup the device node and return it based on an insteon device address */
+		getDeviceNode: function(address){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			let devices = [];
+			
+			RED.nodes.eachConfig(c => c.type.match(/insteon.*device|modem.*config/) !== null ? devices.push(c) : null);
+			return devices.find(d =>
+				d.address.toUpperCase() === address.toUpperCase()
+			) || null;
+		},
+		
+		getSceneNode: function(group){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			let scenes = [];
+			
+			RED.nodes.eachConfig(c => c.type === 'insteon-scene-config' ? scenes.push(c) : null);
+			return scenes.find(s =>
+				parseInt(s.group) === parseInt(group)
+			) || null;
+		},
+		
+		/* Make a hex string for a Byte array */
+		toAddressString: function(address){
+			return address.map(num => num.toString(16).toUpperCase().padStart(2, '0')).join('.');
+		},
+		
+		/* Make sure the address was the correct format and that there is not already another node already using the address */
+		validateDeviceAddress: function(address){
+			if(typeof address !== "string") return false;
+			
+			let adr = address.split('.');
+			if(adr.length !== 3) return false;
+
+			for(var i = 0; i < 3; i++){
+				let val = parseInt(adr[i],16);
+				if(isNaN(val) || val < 0 || val > 255) return false;
+			}
+			
+			return true;
+			
+			/* Check to see if this device address was used in another node */
+			// let devices = [];
+			// RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) ? devices.push(c) : "");
+			// let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === address.toUpperCase());
+			//
+			// if(duplicate.length > 0){
+			// 	duplicate[0].dirty = true;
+			// 	duplicate[0].highlighted = true;
+			// 	RED.view.redraw();
+			//
+			// 	alert("`"+duplicate[0].name + "` is already using this address.");
+			// 	return false;
+			// }
+			// else{
+			// 	/* Clear the red highlighted nodes */
+			// 	devices.forEach(device => {
+			// 		device.dirty = true;
+			// 		device.highlighted = false;
+			// 		RED.view.redraw();
+			// 	});
+			// 	return true;
+			// }
+		},
+		
+		/* Check to see if the device A and device B are properly linked together
+		 * If device A has a controller record for device B, device B must have a responder record for device A
+		 * If device B has a responder record for device A, device A must have a controller record for device B
+		 * deviceAddress must be a string: 'AA.BB.CC'
+		 * insteonLink must be a DeviceLinkRecord object
+		 */
+		validateForeignLink: function(address, insteonLink){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			let deviceA = address;
+			let deviceB = insteon.toAddressString(insteonLink.device);
+			
+			return insteon.device.readCache(deviceB).links.filter(deviceBLink => {
+				return insteonLink.Type.control !== deviceBLink.Type.control // If this is a control record, check respond records and vice versa. 
+					&& deviceBLink.Type.active // record must be active
+					&& deviceA === insteon.toAddressString(deviceBLink.device)
+					&& deviceBLink.group === insteonLink.group
+				}).length > 0;
+		},
+
+		/*
+			This mimics a config node drop down and is used in all nodes that need to select a device.
+			Because there are many types of config nodes (one for each device class), we cannot use 
+			the standard built in node red config node widget, as it is bound to a single type of config node
+		 */
+		buildDeviceSelectOptions: function(selectId, selectedDeviceId){
+			// Build the device select options
+			[{'type':'insteon-device-config','name':'Unknown Device'},
+			{'type':'insteon-dimmable-lighting-device-config','name':'Dimmable Lighting Device'},
+			{'type':'insteon-dimmable-keypad-device-config','name':'Keypad Dimmer'},
+			{'type':'insteon-switched-lighting-device-config','name':'On/Off Device'},
+			{'type':'insteon-switched-keypad-device-config','name':'On/Off Keypad'},
+			{'type':'insteon-security-device-config','name':'Unknown Security Device'},
+			{'type':'insteon-leak-sensor-device-config','name':'Leak Sensor'},
+			{'type':'insteon-motion-sensor-device-config','name':'Motion Sensor'},
+			{'type':'insteon-open-close-sensor-device-config','name':'Open/Close Sensor'},
+			{'type':'insteon-actuator-device-config','name':'Unknown Actuator Device'},
+			{'type':'insteon-io-linc-device-config','name':'I/O Linc'}].forEach(configType => {
+				let cnodes = [];
+				RED.nodes.eachConfig(c => c.type === configType.type ? cnodes.push(c) : '');
+		
+				if(cnodes.length > 0){
+					let optgroup = $('<optgroup/>', { label: configType.name });
+			
+					cnodes.forEach(cnode => {
+						$('<option/>', { value: cnode.id, selected: selectedDeviceId === cnode.id, html: cnode.name }).appendTo(optgroup);
+					});
+			
+					optgroup.appendTo($(`#${selectId}`));
+				}
+			});
+		}
+		
+		//#endregion
+		
+	});
+	
 </script>
 
 <!-- Node Configuration -->
@@ -262,6 +538,15 @@
 		<input type='text' id='node-config-input-path' style='width:66%;'>
 		<a id='node-config-lookup-modems' class='btn'><i id='node-config-lookup-modems-icon' class='fa fa-search'></i></a>
 	</div>
+	<div class='form-row'>
+		<label for='node-config-input-name'>Name</label>
+		<input type='text' id='node-config-input-name' placeholder='MyPLM' style='width:66%;'>
+	</div>
+	<div class='form-row'>
+		<label for='node-config-input-address'>Address</label>
+		<input type='text' id='node-config-input-address' placeholder='AA.BB.CC' style='width:66%;'>
+	</div>
+
 	<div class='form-row' style='height: 500px'>
 
 	<div id='accordion'>
@@ -273,7 +558,7 @@
 				<tr>
 					<th style='text-align: left;'>Type</th>
 					<th style='text-align: left;'>Device</th>
-					<th style='text-align: left;'>Group</th>
+					<th style='text-align: left;'>Scene</th>
 					<th style='text-align: left;'>&nbsp;</th>
 				</tr>
 			</thead>
@@ -284,20 +569,32 @@
 
 	  <h3>Add New Device</h3>
 	  <div>
-		  <p>Links a new device with your PLM. If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
-		  <p>After a new device is linked with the PLM, you can configure the device from the Subscribe or Command nodes.</p>
-		  <input id='new_device_address' type='text' placeholder='AA.BB.CC' />
-		  <button id='add_device' class='btn'>Add Device</button>
+	  	<p>Links a new device with your PLM. If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
+		<p>After a new device is linked with the PLM, you can set the device's insteon settings from it's configuration node.</p>
+		<input id='new-device-address' style='width: 100px' type='text' placeholder='AA.BB.CC' name='notASearchField1' />
+		<input id='new-device-name' style='width: 175px' type='text' placeholder='Living Room Switch' name='notASearchField2' />
+		<button id='add-device' class='btn'>Add Device</button>
+
+		<div class="insteon-status" style="text-align: left;"></div>
+
 	  </div>
 
 	  <h3>Remove Device</h3>
 	  <div>
 	  	<p>Removes the controller & responder links from both the device and the PLM.</p>
 		<p>If the device is battery powered, press and hold the set button until the device's LED blinks to keep it awake.</p>
-	  	<select id='device_address_to_remove'></select>
-		<button id='remove_device' class='btn'>Remove Device</button>
+	  	<select id='device-address-to-remove'></select>
+		<button id='remove-device' class='btn'>Remove Device</button>
+		<div class="insteon-status" style="text-align: left;"></div>
 	  </div>
 
+	  <h3>Add Scene</h3>
+	  <div>
+		  <input id='next-scene-number' style='width: 25px' type='text' disabled='true' />
+		  <input id='new-scene-name' style='width: 175px' type='text' placeholder='Coming Home' name='notASearchField3' />
+		  <button id='add-scene' class='btn'>Add Scene</button>
+	  </div>
+	  
 	</div> <!-- End accordion -->
 
 	</div>

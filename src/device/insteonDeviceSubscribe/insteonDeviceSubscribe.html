@@ -1,43 +1,6 @@
 <!-- Node Registration -->
 <script type="text/javascript">
 
-	//#region Event Methods
-
-	function onInputCheck(n){
-		if($(this).prop("checked")) {
-				node.selectedEvents.push({
-					id: $(this).prop('id'),
-					label: $("label[for='" + $(this).attr('id') + "']").text(),
-					cmd1: $(this).attr('data-cmd1'),
-					cmd2: $(this).attr('data-cmd2')
-				});
-			}
-	}
-
-	//#endregion
-
-	//#region Lifecycle Methods
-
-	function onEditPrepare(){
-		// This: the current node
-
-			// Select the value in the subtype drop down
-			$(`#node-input-subtype option[value="${this.subtype}"]`).attr('selected', 'selected');
-
-			// Check the boxes for the events that have been selected
-			this.selectedEvents.map(el => $(`#${el.id}`).prop('checked',true));
-	}
-
-	function onEditSave(){
-			// This: the current node
-			this.selectedEvents = [];
-
-		// reach which events were selected and push them into the config
-		$(".event-selection input").each(onInputCheck);
-	}
-
-	//#endregion
-
 	//#region Type Registration
 
 	RED.nodes.registerType('insteon-device-subscribe',{
@@ -45,7 +8,7 @@
 		color: '#2e88c5',
 		align: 'left',
 		defaults: {
-			device: { value: '', type: 'insteon-device-config' },
+			device: { value: '', required: true },
 			name: { value: '' },
 			subtype: {value: ''},
 			selectedEvents: { value: null }
@@ -53,10 +16,57 @@
 		inputs: 0,
 		outputs: 1,
 		icon: 'bridge.png',
-		label: function(){ return this.name || 'Device In' },
+		label: function(){ return this.name ? this.name : RED.nodes.node(this.device) !== null ? `${RED.nodes.node(this.device).name} In` : 'Device In' },
 		paletteLabel: 'Device In',
-		oneditprepare: onEditPrepare,
-		oneditsave: onEditSave
+		oneditprepare: function(){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+						
+			// Select the value in the subtype drop down
+			$(`#node-input-subtype option[value="${this.subtype}"]`).attr('selected', 'selected');
+
+			// Check the boxes for the events that have been selected
+			if(this.selectedEvents){
+				this.selectedEvents.map(el => $(`#${el.id}`).prop('checked',true));
+			}
+
+			insteon.buildDeviceSelectOptions('node-input-device',this.device);
+			$("#node-input-device").on('change',function(){ RED.nodes.getType("insteon-device-subscribe").updateAvailableEvents($(this).val()) });
+		},
+		oneditsave: function(){
+			let node = this;
+
+			node.selectedEvents = [];
+
+			// read which events were selected and push them into the config
+			$(".event-selection input:checked").each(function(e){
+					node.selectedEvents.push({
+						id: $(this).prop('id'),
+						label: $("label[for='" + $(this).attr('id') + "']").text(),
+						event: $(this).attr('data-event')
+					});
+			});
+		},
+		
+		updateAvailableEvents: function(deviceNodeId){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+			
+			/* In order to determine which events are relevant to the device, we lookup the device category & subcategory from it's config node's cache. */
+			$("#deviceEvents li").hide();
+			$("#deviceEvents li.all").show();
+			
+			let deviceConfig = RED.nodes.node(deviceNodeId);
+			
+			if(deviceConfig !== null){
+				let cache = insteon.device.readCache(deviceConfig.address);
+				switch(Number(cache.info.cat)){
+					case 0x01: $("#deviceEvents li.dimmer").show(); break;
+					case 0x02: $("#deviceEvents li.onoff").show(); break;
+					default: $("#deviceEvents li.onoff").show(); break; // All insteon devices should support on
+				}
+			}
+		}
 	});
 
 	//#endregion
@@ -67,7 +77,8 @@
 <script type="text/x-red" data-template-name="insteon-device-subscribe">
 	<div class="form-row">
 		<label for="node-input-device">Insteon Device</label>
-		<input type="text" id="node-input-device" placeholder="xyz">
+		<!-- <input type="text" id="node-input-device"> -->
+		<select id="node-input-device"><option value=""></option></select>
 	</div>
 	<div class="form-row">
 		<label for="node-input-name"><i class="icon-tag"></i> Name</label>
@@ -77,33 +88,37 @@
 		<label for="node-input-subtype">Message Type</label>
 		<select id="node-input-subtype">
 			<option value="" label="All" />
-			<option value="0x6" label="Broadcast (Physically Triggered)" />
-			<option value="0x1" label="Acknowledge (Response to Command)" />
+			<option value="physical" label="Broadcast (Physically Triggered)" />
+			<option value="remote" label="Acknowledge (Response to Command)" />
 		</select>
 	</div>
 	<div class="form-row event-selection">
-		<strong>Device Events</strong>
-		<ul>
-			<li><input type="checkbox" title="Turned On"            id="node-input-event-turned-on"            data-cmd1="0x11" data-cmd2="" class="dimmer onoff" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-turned-on">Turned On</label></li>
-			<li><input type="checkbox" title="Turned Off"           id="node-input-event-turned-off"           data-cmd1="0x13" data-cmd2="" class="dimmer onoff" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-turned-off">Turned Off</label></li>
-			<li><input type="checkbox" title="Fast On"              id="node-input-event-fast-on"              data-cmd1="0x12" data-cmd2="" class="dimmer onoff" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-fast-on">Fast On</label></li>
-			<li><input type="checkbox" title="Fast Off"             id="node-input-event-fast-off"             data-cmd1="0x14" data-cmd2="" class="dimmer onoff" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-fast-off">Fast Off</label></li>
-			<li><input type="checkbox" title="Brightened"           id="node-input-event-brightened"           data-cmd1="0x17" data-cmd2="0x1" class="dimmer"    style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-brightened">Brightened</label></li>
-			<li><input type="checkbox" title="Dimmed"               id="node-input-event-dimmed"               data-cmd1="0x17" data-cmd2="0x0" class="dimmer"    style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dimmed">Dimmed</label></li>
-			<li><input type="checkbox" title="Stop Dimming"         id="node-input-event-stop-dimming"         data-cmd1="0x18" data-cmd2="0x0" class="dimmer"    style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-stop-dimming">Stop Dimming</label></li>
+		<strong>Fire When Device is</strong>
+		<ul id="deviceEvents">
+			<li class="all">         <input type="checkbox" title="Raw Packets"         id="node-input-event-raw"                  data-event="p"                   style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-raw">Raw Packets</label></li>
+			<li class="dimmer onoff"><input type="checkbox" title="Turned On"           id="node-input-event-switch-on"            data-event="switch.on"           style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-switch-on">Turned On</label></li>
+			<li class="dimmer onoff"><input type="checkbox" title="Turned Off"          id="node-input-event-switch-off"           data-event="switch.off"          style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-switch-off">Turned Off</label></li>
+			<li class="dimmer onoff"><input type="checkbox" title="Fast On"             id="node-input-event-switch-on-fast"       data-event="switch.on.fast"      style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-switch-on-fast">Fast On</label></li>
+			<li class="dimmer onoff"><input type="checkbox" title="Fast Off"            id="node-input-event-switch-off-fast"      data-event="switch.off.fast"     style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-switch-off-fast">Fast Off</label></li>
+			<li class="dimmer">      <input type="checkbox" title="Brightened"          id="node-input-event-brightened"           data-event="dim.continuous.up"   style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-brightened">Brightened</label></li>
+			<li class="dimmer">      <input type="checkbox" title="Dimmed"              id="node-input-event-dimmed"               data-event="dim.continuous.down" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dimmed">Dimmed</label></li>
+			<li class="dimmer">      <input type="checkbox" title="Stopped Dimming"     id="node-input-event-stop-dimming"         data-event="dim.continuous.stop" style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-stop-dimming">Stop Dimming</label></li>
+			<li class="dimmer">      <input type="checkbox" title="Brightened One Step" id="node-input-event-brightened-one-step"  data-event="dim.step.up"         style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-brightened-one-step">Brightened One Step</label></li>
+			<li class="dimmer">      <input type="checkbox" title="Dimmed One Step"     id="node-input-event-dimmed-one-step"      data-event="dim.step.down"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dimmed-one-step">Dimmed One Step</label></li>
 
-			<li><input type="checkbox" title="Heartbeat"            id="node-input-event-heartbeat"            data-cmd1="0x04" data-cmd2="" class="motion leak"  style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-heartbeat">Heartbeat</label></li>
 
-			<li><input type="checkbox" title="Low Battery Detected" id="node-input-event-low-battery-detected" data-cmd1="0x70" data-cmd2="0x02" class="motion leak"  style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-low-battery-detected">Low Battery Detected</label></li>
-			<li><input type="checkbox" title="Low Battery Cleared"  id="node-input-event-low-battery-cleared"  data-cmd1="0x70" data-cmd2="0x03" class="motion leak"  style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-low-battery-cleared">Low Battery Cleared</label></li>
+			<li><input type="checkbox" title="Heartbeat"            id="node-input-event-heartbeat"            data-event="0x04" data-cmd2="" class="motion leak"  style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-heartbeat">Heartbeat</label></li>
 
-			<li><input type="checkbox" title="Motion Detected"      id="node-input-event-motion-detected"      data-cmd1="0x11" data-cmd2="" class="motion"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-motion-detected">Motion Detected</label></li>
-			<li><input type="checkbox" title="Motion Timeout"       id="node-input-event-motion-timeout"       data-cmd1="0x13" data-cmd2="" class="motion"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-motion-timeout">Motion Timeout</label></li>
-			<li><input type="checkbox" title="Dusk Detected"        id="node-input-event-dusk-detected"        data-cmd1="" data-cmd2="" class="motion"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dusk-detected">Dusk Detected</label></li>
-			<li><input type="checkbox" title="Dawn Detected"        id="node-input-event-dawn-detected"        data-cmd1="" data-cmd2="" class="motion"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dawn-detected">Dawn Detected</label></li>
+			<li><input type="checkbox" title="Low Battery Detected" id="node-input-event-low-battery-detected" data-event="0x70" data-cmd2="0x02" class="motion leak"  style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-low-battery-detected">Low Battery Detected</label></li>
+			<li><input type="checkbox" title="Low Battery Cleared"  id="node-input-event-low-battery-cleared"  data-event="0x70" data-cmd2="0x03" class="motion leak"  style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-low-battery-cleared">Low Battery Cleared</label></li>
 
-			<li><input type="checkbox" title="Water Detected"       id="node-input-event-water-detected"       data-cmd1="0x70" data-cmd2="0x00" class="leak"         style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-water-detected">Water Detected</label></li>
-			<li><input type="checkbox" title="Dry Detected"         id="node-input-event-dry-detected"         data-cmd1="0x70" data-cmd2="0x01" class="leak"         style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dry-detected">Dry Detected</label></li>
+			<li><input type="checkbox" title="Motion Detected"      id="node-input-event-motion-detected"      data-event="0x11" data-cmd2="" class="motion"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-motion-detected">Motion Detected</label></li>
+			<li><input type="checkbox" title="Motion Timeout"       id="node-input-event-motion-timeout"       data-event="0x13" data-cmd2="" class="motion"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-motion-timeout">Motion Timeout</label></li>
+			<li><input type="checkbox" title="Dusk Detected"        id="node-input-event-dusk-detected"        data-event="" data-cmd2="" class="motion"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dusk-detected">Dusk Detected</label></li>
+			<li><input type="checkbox" title="Dawn Detected"        id="node-input-event-dawn-detected"        data-event="" data-cmd2="" class="motion"       style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dawn-detected">Dawn Detected</label></li>
+
+			<li><input type="checkbox" title="Water Detected"       id="node-input-event-water-detected"       data-event="0x70" data-cmd2="0x00" class="leak"         style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-water-detected">Water Detected</label></li>
+			<li><input type="checkbox" title="Dry Detected"         id="node-input-event-dry-detected"         data-event="0x70" data-cmd2="0x01" class="leak"         style="width: 20px; margin: 0 2px 1px 2px;"> <label style="width: 200px" for="node-input-event-dry-detected">Dry Detected</label></li>
 		</ul>
 	</div>
 </script>

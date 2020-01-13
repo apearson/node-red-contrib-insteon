@@ -1,0 +1,111 @@
+<!-- Node Registration -->
+<script type="text/javascript">
+	/** Type Registration **/
+	RED.nodes.registerType('insteon-leak-sensor-device-config',{
+		category: 'config',
+		align: 'left',
+		defaults: {
+			modem: { value: '', type: 'insteon-modem-config' },
+			name: { value: '' },
+			address: { value: '', required: true, validate: function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
+			cache: { value: ''},
+		},
+		oneditprepare: function(){
+			let node = this;
+			
+			/* import the JS functions from the modem & top level device config node */
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+
+			/* parse the cache json into an object */
+			let cache = insteon.device.readCache();
+			
+			/* Initalize the device config panel */
+			insteon.device.onDeviceEditPrepare(node);
+		},
+		inputs: 0,
+		outputs: 0,
+		icon: 'light.png',
+		label: function(){ return this.name || 'Leak Sensor' }
+	});
+</script>
+
+<!-- Node Configuration -->
+<script type="text/x-red" data-template-name="insteon-leak-sensor-device-config">
+	<div class="form-row">
+		<label for="node-config-input-modem">Insteon Modem</label>
+		<input type="text" id="node-config-input-modem" placeholder="/dev/usb123">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-name"><i class="icon-tag"></i> Name</label>
+		<input type="text" id="node-config-input-name" placeholder="Name">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-address"><i class="icon-tag"></i>Address</label>
+		<input type="text" style="width: 80px" id="node-config-input-address" placeholder="AA.BB.CC" />
+		<span id="device-description"></span>		
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-cache"><i class="icon-tag"></i>cache</label>
+		<input type="text" id="node-config-input-cache" placeholder="" disabled="true" />
+	</div>
+	
+	<div id='accordion'>
+	  <h3>Controller Links</h3>
+	  <div>
+		<table width='100%'>
+			<thead>
+				<tr>
+					<th style='text-align: left;'>Device</th>
+					<th style='text-align: left;'>Scene</th>
+					<th style='text-align: left;'>&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody id='controllerLinks'>
+			</tbody>
+		</table>
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+		</div>		
+	  </div>
+
+	  <h3>Responder Links</h3>
+	  <div>
+		<table width='100%'>
+			<thead>
+				<tr>
+					<th style='text-align: left;'>Device</th>
+					<th style='text-align: left;'>Scene</th>
+					<th style='text-align: left;'>On Level</th>
+					<th style='text-align: left;'>Ramp Rate</th>
+					<th style='text-align: left;'>&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody id='responderLinks'>
+			</tbody>
+		</table>
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+		</div>
+	  </div>
+
+	</div> <!-- End accordion -->
+	
+
+</script>
+
+<!-- Help Panel -->
+<script type="text/x-red" data-help-name="insteon-leak-sensor-device-config">	
+	<h3>Info</h3>
+	<p>Represents one physical Insteon Leak Sensor.</p>
+	
+	<p>Note that Leak Sensors do not send Off/Dry commands automatically. Once leak is deteted, you must reset the sensor by physically pressing it's set button once.</p>
+	
+	<ul>
+		<li><strong>Name</strong> - Give a friendly name to your Insteon Leak Sensor.</li>
+		<li><strong>Address</strong> - The Insteon address for the device found on the device's sticker.</li>
+		<li><strong>Controller Links</strong> - Control these devices. e.g. When the leak sensor detects water, send an <em>on<em> command to these devices. These receiving devices must have a responder link, otherwise the messages will be ignored.</li>
+		<li><strong>Responder Links</strong> - Not Applicable. Leak sensors are battery operated and do not respond to commands from other devices.</li>
+	</ul>
+
+</script>
