@@ -6,7 +6,7 @@
 		defaults: {
 			path: { value: '', required: true },
 			name: { value: '' },
-			address: { value: '', function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
+			address: { value: '', required: true, validate: function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
 		},
 		label: function(){
 			return this.path || 'Insteon Modem'
@@ -42,29 +42,13 @@
 			$('#add-scene').click(e => {
 				e.preventDefault();
 				
-				let groupNumbers = [];
-				let nextGroupNumber = 0;
-			    $("#links td.group").each(function() {
-					let group = parseInt($(this).text());
-			        if ($.inArray(group, groupNumbers) === -1)
-			            groupNumbers.push(group);
-			    });
-				groupNumbers.sort();
-				
-				for(var i = 2; i<255; i++){
-					if($.inArray(i, groupNumbers) === -1){
-						nextGroupNumber = i;
-						break;
-					}
-				}
-
 				let newNode = {
 					id: RED.nodes.id(),
 					_def: RED.nodes.getType('insteon-scene-config'),
 					type: 'insteon-scene-config',
 					users: [],
 					modem: node.id,
-					group: nextGroupNumber,
+					group: $("#next-scene-number").val(),
 					name: $('#new-scene-name').val()
 				}
 				
@@ -172,6 +156,7 @@
 
 		/* Render an HTML table containing all of the link data from the modem
 		 * In parallel, render the select drop down in the remove device panel
+		 * and calculate the next available scene number
 		 */
 		renderLinksTable: function(links){
 			let insteon = RED.nodes.getType("insteon-modem-config");
@@ -225,9 +210,47 @@
 						}
 					}).appendTo(deviceCell);
 				}
+				/* End device cell */
+
+				/* create a clickable link for insteon scene/group */
+				let sceneConfigNode = insteon.getSceneNode(link.group);
+				let sceneCell = $('<td>', { style:'white-space:nowrap' });
+				
+				if(link.group === 1){
+					$('<a>', {
+						text: link.group,
+						click: function(e){
+							e.preventDefault();
+						}
+					}).appendTo(sceneCell);
+				}else if(sceneConfigNode === null){
+					$('<a>', {
+						href: '#',
+						html: `${link.group}: Add &raquo;`,
+						click: function(e){
+							e.preventDefault();
+							// Switch to the add new scene panel in the accordion
+							$("#next-scene-number").val(link.group);
+							$("#new-scene-name").focus();
+							$("#accordion").accordion( "option", "active", 3);
+						}
+					}).appendTo(sceneCell);
+				}else{
+					$('<a>', {
+						href: '#',
+						html: `${link.group}: ${sceneConfigNode.name}`,
+						click: function(e){
+							e.preventDefault();
+							RED.editor.editConfig('', sceneConfigNode.type, sceneConfigNode.id);
+						}
+					}).appendTo(sceneCell);
+				}
+				/* End scene cell */
+				
+				
 
 				// Creating device row to hold device info
-				const row = insteon.renderDeviceRow(link, deviceCell);
+				const row = insteon.renderDeviceRow(link, deviceCell, sceneCell);
 
 				// Appending device row to links table
 				row.appendTo($('#links'));
@@ -243,10 +266,26 @@
 				}).appendTo($('#device-address-to-remove'));
 
 			});
+			
+			/* calculate next scene number */
+			let nextGroupNumber = 0;
+			let groupNumbers = links.map(l => parseInt(l.group));
+			groupNumbers.sort();
+
+			for (var i = 2; i < 255; i++) {
+				if ($.inArray(i, groupNumbers) === -1) {
+					nextGroupNumber = i;
+					break;
+				}
+			}
+			
+			/* Update the input for new scene # */
+			$("#next-scene-number").val(nextGroupNumber);
+			
 		},
 		
 		/* render a table row for renderLinksTable */
-		renderDeviceRow: function(link, deviceCell){
+		renderDeviceRow: function(link, deviceCell, sceneCell){
 			// Table row
 			let row = $('<tr/>');
 
@@ -258,10 +297,12 @@
 			// Device Column
 			deviceCell.appendTo(row);
 
-			// Group Column
-			$('<td class="group">', { style:'white-space:nowrap' })
-				.text(link.group)
-				.appendTo(row);
+			// Scene Column
+			sceneCell.appendTo(row);
+			
+			// $('<td class="group">', { style:'white-space:nowrap' })
+			// 	.text(link.group)
+			// 	.appendTo(row);
 
 			// Blank Column
 			$('<td>', { style:'white-space:nowrap' })
@@ -323,14 +364,18 @@
 		
 		/* Subscribe / unsubscribe from the NR websocket status updates for a node */
 		subscribeConfigStatus: function(nodeId,handler){
+			// console.log(`subscribe ${nodeId}`);
 			RED.comms.subscribe(`status/${nodeId}`,handler);
 		},
 		
 		unsubscribeConfigStatus: function(nodeId,handler){
+			// console.log(`UNsubscribe ${nodeId}`);
 			RED.comms.unsubscribe(`status/${nodeId}`,handler);
 		},
 
 		configStatusHandler: function(topic,msg){
+			// console.log(`configStatusHandler `,topic,msg);
+			
 			switch(msg.fill){
 				case 'red':    msg.fill = '#cc0000'; break;
 				case 'green':  msg.fill = '#55aa88'; break;
@@ -372,6 +417,17 @@
 			) || null;
 		},
 		
+		getSceneNode: function(group){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			let scenes = [];
+			
+			RED.nodes.eachConfig(c => c.type === 'insteon-scene-config' ? scenes.push(c) : null);
+			return scenes.find(s =>
+				parseInt(s.group) === parseInt(group)
+			) || null;
+		},
+		
 		/* Make a hex string for a Byte array */
 		toAddressString: function(address){
 			return address.map(num => num.toString(16).toUpperCase().padStart(2, '0')).join('.');
@@ -379,28 +435,40 @@
 		
 		/* Make sure the address was the correct format and that there is not already another node already using the address */
 		validateDeviceAddress: function(address){
+			if(typeof address !== "string") return false;
+			
+			let adr = address.split('.');
+			if(adr.length !== 3) return false;
+
+			for(var i = 0; i < 3; i++){
+				let val = parseInt(adr[i],16);
+				if(isNaN(val) || val < 0 || val > 255) return false;
+			}
+			
+			return true;
+			
 			/* Check to see if this device address was used in another node */
-			let devices = [];
-			RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) ? devices.push(c) : "");
-			let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === address.toUpperCase());
-
-			if(duplicate.length > 0){
-				duplicate[0].dirty = true;
-				duplicate[0].highlighted = true;
-				RED.view.redraw();
-
-				alert("`"+duplicate[0].name + "` is already using this address.");
-				return false;
-			}
-			else{
-				/* Clear the red highlighted nodes */
-				devices.forEach(device => {
-					device.dirty = true;
-					device.highlighted = false;
-					RED.view.redraw();
-				});
-				return true;
-			}
+			// let devices = [];
+			// RED.nodes.eachConfig(c => c.type.match(/insteon.*device.*config/) ? devices.push(c) : "");
+			// let duplicate = devices.filter(existing => existing.id !== this.id && existing.address === address.toUpperCase());
+			//
+			// if(duplicate.length > 0){
+			// 	duplicate[0].dirty = true;
+			// 	duplicate[0].highlighted = true;
+			// 	RED.view.redraw();
+			//
+			// 	alert("`"+duplicate[0].name + "` is already using this address.");
+			// 	return false;
+			// }
+			// else{
+			// 	/* Clear the red highlighted nodes */
+			// 	devices.forEach(device => {
+			// 		device.dirty = true;
+			// 		device.highlighted = false;
+			// 		RED.view.redraw();
+			// 	});
+			// 	return true;
+			// }
 		},
 		
 		/* Check to see if the device A and device B are properly linked together
@@ -522,6 +590,7 @@
 
 	  <h3>Add Scene</h3>
 	  <div>
+		  <input id='next-scene-number' style='width: 25px' type='text' disabled='true' />
 		  <input id='new-scene-name' style='width: 175px' type='text' placeholder='Coming Home' name='notASearchField3' />
 		  <button id='add-scene' class='btn'>Add Scene</button>
 	  </div>
