@@ -8,7 +8,7 @@
 		defaults: {
 			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' },
-			address: { value: '', function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
+			address: { value: '', required: true, validate: function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
 			cache: { value: '' },
 		},
 		oneditprepare: function(){
