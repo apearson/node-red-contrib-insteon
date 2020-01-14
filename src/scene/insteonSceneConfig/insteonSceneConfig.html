@@ -200,17 +200,39 @@
 			 * 4. map the filtered device list into a new scene member object
 			 */
 
+			// let controllers = devices.filter(device => {
+			// 	return responders.map(responder =>
+			// 		responder.device.address
+			// 	).filter(a => device.address !== a).every(responderAddress => {
+			// 			return device.links.filter(link => link.Type.control).map(link => insteon.toAddressString(link.device)).indexOf(responderAddress) > -1
+			// 		}
+			// 	)
+			// }).map(device => {
+			// 	return insteon.scene.makeSceneMember(device, {}, true);
+			// });
+			
 			let controllers = devices.filter(device => {
-				return responders.map(responder => 
+				let responderAddresses = responders.map(responder =>
 					responder.device.address
-				).every(responderAddress => {
-						return responderAddress === device.address
-						|| device.links.filter(link => link.Type.control).map(link => insteon.toAddressString(link.device)).indexOf(responderAddress) > -1
-					}
-				)
+				);
+
+				responderAddresses = responderAddresses.filter(a => device.address !== a);
+				if (responderAddresses.length === 0) return false;
+
+				/* If a device has a control link for every single responder of the scene, then it is a controller of this scene */
+				let result = responderAddresses.every(responderAddress => {
+					let controlLinks = device.links.filter(link => link.Type.control);
+
+					let controlAddresses = controlLinks.map(link => insteon.toAddressString(link.device));
+
+					return controlAddresses.indexOf(responderAddress) > -1
+				});
+
+				return result;
 			}).map(device => {
 				return insteon.scene.makeSceneMember(device, {}, true);
 			});
+
 
 			/* merge the controllers and responders into one array */
 			return retval.concat(responders,controllers);
@@ -433,7 +455,8 @@
 			
 			let group = parseInt($("#node-config-input-group").val());
 			let plmConfigNode = $("#node-config-input-modem").val();
-			let plmAddress = RED.nodes.node($("#node-config-input-modem").val()).address;
+			let plmAddress = RED.nodes.node($("#node-config-input-modem").val()).address.toUpperCase();
+			let devices = insteon.scene.getDeviceList();
 			
 			let data = {
 				plmConfigNode,
@@ -449,8 +472,6 @@
 					data.groupMembers.push({ address: $(tr).data('device-address'), description: $(tr).find("td a").text() });
 				}
 			});
-			
-			let devices = insteon.scene.getDeviceList();
 			
 			/* New Responders */
 			$("#responderLinks tr.new").each((i,tr) => {
@@ -660,14 +681,16 @@
 							controller: true
 						});
 					});
-
-					/* Delete the corresponding responder links	from the deleted device */
-					data.deviceLinksToDelete.push({
-						deviceAddress: deletedDeviceAddress,
-						linkAddress: responderLink.address,
-						foreignAddress: controllerDeviceAddress,
-						controller: false
-					});
+					
+					if(responderLink){
+						/* Delete the corresponding responder links	from the deleted device */
+						data.deviceLinksToDelete.push({
+							deviceAddress: deletedDeviceAddress,
+							linkAddress: responderLink.address,
+							foreignAddress: controllerDeviceAddress,
+							controller: false
+						});
+					}
 				});
 
 			});
