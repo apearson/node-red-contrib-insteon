@@ -1,7 +1,6 @@
 import logger from 'debug';
 /* Configuring logging */
 const debug = logger('node-red-contrib-insteon:insteonDeviceSubscribe');
-debug.enabled = false;
 
 import { Red, NodeProperties } from 'node-red';
 import { Packet } from 'insteon-plm';
