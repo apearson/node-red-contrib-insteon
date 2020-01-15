@@ -6,7 +6,6 @@
 import logger from 'debug';
 /* Configuring logging */
 const debug = logger('node-red-contrib-insteon:configMethods');
-debug.enabled = false;
 
 import { Red, NodeProperties } from 'node-red';
 import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../types/types';
