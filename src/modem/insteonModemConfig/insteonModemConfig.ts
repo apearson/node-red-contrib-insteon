@@ -319,7 +319,7 @@ async function updateDeviceConfig(RED: Red, req: Request, res: Response){
 		deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: 'Loading device...'});
 
 		let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false });
-		
+
 		deviceConfigNode?.status({fill: 'yellow', shape: 'dot', text: 'Updating configuration...'});
 		
 		/* write each of the configuration settings */
@@ -434,7 +434,8 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 			
 			node?.status({fill: 'yellow', shape: 'dot', text: `Querying ${req.body.groupMembers[i].description} ...`});
 			
-			devices[req.body.groupMembers[i].address] = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: true, syncLinks: false });
+			devices[req.body.groupMembers[i].address] = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false });
+			await devices[req.body.groupMembers[i].address].syncInfo();
 			await devices[req.body.groupMembers[i].address].syncLinks();
 			
 			descriptions[req.body.groupMembers[i].address] = req.body.groupMembers[i].description;
@@ -559,9 +560,10 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 			for(var i = 0; i < req.body.plmLinksToAdd.length; i++){
 				let newLink = req.body.plmLinksToAdd[i];
 				let deviceAddress = Utilities.toAddressArray(newLink.deviceAddress);
+				let device = devices[newLink.deviceAddress];
 				let operation = newLink.controller ? AllLinkRecordOperation.ModifyFirstControllerFoundOrAdd : AllLinkRecordOperation.ModifyFirstResponderFoundOrAdd;
 				let type = newLink.controller ? AllLinkRecordType.Controller : AllLinkRecordType.Responder;
-				const linkData = [0x00,0x00,0x00] as Byte[];
+				const linkData = [device.cat,device.subcat,device.firmware] as Byte[];
 
 				node?.status({fill: 'yellow', shape: 'dot', text: `Adding ${newLink.control ? "controler" : "responder"} link for ${descriptions[newLink.foreignAddress]} to ${descriptions[newLink.deviceAddress]}...`});
 								
@@ -579,9 +581,10 @@ async function updateSceneConfig(RED: Red, req: Request, res: Response){
 			for(var i = 0; i < req.body.plmLinksToDelete.length; i++){
 				let deleteLink = req.body.plmLinksToDelete[i];
 				let deviceAddress = Utilities.toAddressArray(deleteLink.deviceAddress);
+				let device = devices[deleteLink.deviceAddress];
 				let operation = AllLinkRecordOperation.ModifyFirstFoundOrAdd;
 				let type = AllLinkRecordType.Deleted;
-				const linkData = [0x00,0x00,0x00] as Byte[];
+				const linkData = [device.cat,device.subcat,device.firmware] as Byte[];
 
 				node?.status({fill: 'yellow', shape: 'dot', text: `Deleting ${deleteLink.control ? "controler" : "responder"} link for ${descriptions[deleteLink.foreignAddress]} from ${descriptions[deleteLink.deviceAddress]}...`});
 
