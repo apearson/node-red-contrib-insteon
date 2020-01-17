@@ -1,0 +1,240 @@
+<!-- Node Registration -->
+<script type="text/javascript">
+	/** Type Registration **/
+	RED.nodes.registerType('insteon-dimmable-lighting-device-config',{
+		category: 'config',
+		align: 'left',
+		defaults: {
+			modem: { value: '', type: 'insteon-modem-config' },
+			name: { value: '' },
+			address: { value: '', required: true, validate: function(v){ return RED.nodes.getType("insteon-modem-config").validateDeviceAddress(v) } },
+			cache: { value: ''},
+		},
+		oneditsave: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
+		oneditcancel: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
+		oneditdelete: function(){ RED.nodes.getType("insteon-modem-config").unsubscribeConfigStatus(this.id, RED.nodes.getType("insteon-modem-config").configStatusHandler) },
+		oneditprepare: function(){
+			let node = this;
+
+			/* import the JS functions from the modem & top level device config node */
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			insteon.device = RED.nodes.getType("insteon-device-config");
+
+			/* setup the status event listener to display the node status to the user */
+			insteon.subscribeConfigStatus(node.id, insteon.configStatusHandler);
+
+			/* parse the cache json into an object */
+			let cache = insteon.device.readCache();
+
+			/* Initalize the device config panel */
+			insteon.device.onDeviceEditPrepare(node);
+
+			/* setup the checkbox states. store the initial value in data so that we may send only the changed values */
+			$("#node-config-input-program-lock").prop('checked',cache.config.programLock).data('initial',cache.config.programLock);
+			$("#node-config-input-led-on-tx").prop('checked',cache.config.LEDonTX).data('initial',cache.config.LEDonTX);
+			$("#node-config-input-load-sense").prop('checked',cache.config.loadSense).data('initial',cache.config.loadSense);
+			$("#node-config-input-led-disabled").prop('checked',cache.config.LEDDisabled).data('initial',cache.config.LEDDisabled);
+			$("#node-config-input-resume-dim").prop('checked',cache.config.resumeDim).data('initial',cache.config.resumeDim);
+
+			/* Add warnings to the resume dim and load sense - we do not have detailed enough feature detection to disable these settings for devices which do not support them */
+			$("#node-config-input-load-sense,#node-config-input-resume-dim").change(function(){
+				if(this.checked){
+					let label = $(`label[for='${this.id}']`).text();
+					alert(`Not all Insteon devices support ${label}. If you enable ${label} on a device that does not support it, the device may not work correctly until you disable this feature.`);
+				}
+			});
+
+			/* Ramp rate slider */
+			let rampHandle = $("#node-config-input-ramp-rate-slider .ui-slider-handle");
+			$("#node-config-input-ramp-rate-slider").slider({
+				min: 0,
+				max: 31,
+				value: 31 - cache.extendedConfig.rampRate,
+				create: function() {
+					let val = $(this).slider("value");
+					$("#node-config-input-ramp-rate")
+						.val(31 - val) // invert the value since the insteon range is backward
+						.data('initial', cache.extendedConfig.rampRate);
+
+					rampHandle.text(insteon.device.rampRates[val]);
+				},
+		        slide: function(event, ui) {
+		        	let val = ui.value;
+		        	$("#node-config-input-ramp-rate").val(31 - val); // invert the value since the insteon range is backward
+		        	rampHandle.text(insteon.device.rampRates[val]);
+		        }
+			});
+
+			/* On level slider */
+			let onLevelHandle = $("#node-config-input-on-level-slider .ui-slider-handle");
+			$("#node-config-input-on-level-slider").slider({
+				min: 0,
+				max: 255,
+				value: cache.extendedConfig.onLevel,
+				create: function() {
+					let val = $(this).slider("value");
+					$("#node-config-input-on-level")
+						.val(val)
+						.data('initial', cache.extendedConfig.onLevel);
+
+					onLevelHandle.text(`${Math.round((val / 255) * 100)}%`);
+				},
+				slide: function(event, ui) {
+					let val = ui.value;
+					$("#node-config-input-on-level").val(val);
+					onLevelHandle.text(`${Math.round((val / 255) * 100)}%`);
+				}
+			});
+		},
+		inputs: 0,
+		outputs: 0,
+		icon: 'light.png',
+		label: function(){ return this.name || 'Insteon Device' }
+	});
+</script>
+
+<!-- Node Configuration -->
+<script type="text/x-red" data-template-name="insteon-dimmable-lighting-device-config">
+	<div class="form-row">
+		<label for="node-config-input-modem">Insteon Modem</label>
+		<input type="text" id="node-config-input-modem" placeholder="/dev/usb123">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-name"><i class="icon-tag"></i> Name</label>
+		<input type="text" id="node-config-input-name" placeholder="Name">
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-address"><i class="icon-tag"></i>Address</label>
+		<input type="text" style="width: 80px" id="node-config-input-address" placeholder="AA.BB.CC" />
+		<span id="device-description"></span>		
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-cache"><i class="icon-tag"></i>cache</label>
+		<input type="text" id="node-config-input-cache" placeholder="" disabled="true" />
+	</div>
+	
+	<div id='accordion'>
+	  <h3>Dimmable Device Settings</h3>
+	  <div>
+	  	<div class="form-row">
+	  		<label for="node-config-input-ramp-rate-slider"><i class="icon-tag"></i>Ramp Rate</label>
+			<div id="node-config-input-ramp-rate-slider" class="" style="width: 90%">
+				<div class="ui-slider-handle" style="width: 4em; height: 1.6em; top: 50%; margin-top: -.8em; text-align: center; line-height: 1.6em;"></div>
+			</div>
+	  		<input type="hidden" name="rampRate" id="node-config-input-ramp-rate" class="insteon-device-config" />
+	  	</div>
+		
+	  	<div class="form-row">
+	  		<label for="node-config-input-on-level-slider"><i class="icon-tag"></i>On Level</label>
+			<div id="node-config-input-on-level-slider" class="" style="width: 90%">
+				<div class="ui-slider-handle" style="width: 4em; height: 1.6em; top: 50%; margin-top: -.8em; text-align: center; line-height: 1.6em;"></div>
+			</div>
+	  		<input type="hidden" name="onLevel" id="node-config-input-on-level" class="insteon-device-config" />
+	  	</div>
+		
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="programLock" id="node-config-input-program-lock" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-program-lock" class="red-ui-treeList-label-text">Program Lock</label>
+		</div>
+	
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="LEDonTX" id="node-config-input-led-on-tx" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-led-on-tx" class="red-ui-treeList-label-text">Flash LED on Message Transmit</label>
+		</div>
+
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="loadSense" id="node-config-input-load-sense" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-load-sense" class="red-ui-treeList-label-text">Load Sense</label>
+		</div>
+
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="LEDDisabled" id="node-config-input-led-disabled" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-led-disabled" class="red-ui-treeList-label-text">LED Disabled</label>
+		</div>
+		
+	  	<div class="red-ui-treeList-label">
+			<span class="red-ui-treeList-icon">
+				<input type="checkbox" name="resumeDim" id="node-config-input-resume-dim" class="insteon-device-config red-ui-treeList-checkbox" autocomplete="disable" />
+			</span>
+	  		<label style="display: inline" for="node-config-input-resume-dim" class="red-ui-treeList-label-text">Resume Dim</label>
+		</div>
+		
+		<div class="red-ui-tray-toolbar">		
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+			<div class="insteon-status" style="text-align: left;"></div>
+		</div>		
+	  </div>
+
+	  <h3>Controller Links</h3>
+	  <div>
+		<table width='100%'>
+			<thead>
+				<tr>
+					<th style='text-align: left;'>Device</th>
+					<th style='text-align: left;'>Scene</th>
+					<th style='text-align: left;'>&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody id='controllerLinks'>
+			</tbody>
+		</table>
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+			<div class="insteon-status" style="text-align: left;"></div>
+		</div>		
+	  </div>
+
+	  <h3>Responder Links</h3>
+	  <div>
+		<table width='100%'>
+			<thead>
+				<tr>
+					<th style='text-align: left;'>Device</th>
+					<th style='text-align: left;'>Scene</th>
+					<th style='text-align: left;'>On Level</th>
+					<th style='text-align: left;'>Ramp Rate</th>
+					<th style='text-align: left;'>&nbsp;</th>
+				</tr>
+			</thead>
+			<tbody id='responderLinks'>
+			</tbody>
+		</table>
+		<div class="red-ui-tray-toolbar">
+			<button class="update-device-config ui-button ui-corner-all ui-widget primary">Deploy & Write Changes to Device</button>
+			<div class="insteon-status" style="text-align: left;"></div>
+		</div>		
+	  </div>
+
+	</div> <!-- End accordion -->
+	
+
+</script>
+
+<!-- Help Panel -->
+<script type="text/x-red" data-help-name="insteon-dimmable-lighting-device-config">	
+	<h3>Info</h3>
+	<p>Represents one physical dimmable Insteon lighting device.</p>
+	
+	<ul>
+		<li><strong>Name</strong> - Give a friendly name to your dimmable Insteon device.</li>
+		<li><strong>Address</strong> - The Insteon address for the device found on the device's sticker.</li>
+		<li><strong>Ramp Rate</strong> - When physically tapping the on or off button, this is the time that it takes for the dimmer to ramp up or down.</li>
+		<li><strong>On Level</strong> - When physically tapping the on button, this is the level at which the dimmer will turn on to.</li>
+		<li><strong>Program Lock</strong> - Disables reprogramming of the device from it's set button.</li>
+		<li><strong>Flash LED on Message Transmit</strong> - When activated, the LED on the device will flash as insteon messages are sent.</li>
+		<li><strong>Load Sense</strong> - When enabled, the Insteon device will turn on when it senses load (e.g. a lamp being turned on). This makes an ordinary lamp switch smart. <em>This feature is only available on certain devices - check your manual!</em></li>
+		<li><strong>LED Disabled</strong> - Turn off device's status LED.</li>
+		<li><strong>Resume Dim</strong> - When enabled, the Insteon device will remember the last brightness level and turn on to that level. <em>This feature is only available on certain devices - check your manual!</em></li>
+		<li><strong>Controller Links</strong> - Control these devices. e.g. When physically turning the device <em>on</em>, it will broadcast <em>on</em> commands to all devices it controls. These receiving devices must have a responder link, otherwise the messages will be ignored.</li>
+		<li><strong>Responder Links</strong> - Listen for commands from these devices. This device will respond using the <em>ramp rate</em> and <em>on level</em> of the <em>responder link</em>.</li>
+	</ul>
+
+</script>
