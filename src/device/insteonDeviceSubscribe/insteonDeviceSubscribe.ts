@@ -4,8 +4,6 @@ import { DeviceSubscribeNode, InsteonDeviceConfigNode } from '../../types/types'
 
 interface SubscribeConfigNodeProps extends NodeProperties {
 	device: string;
-	selectedEvents: string[];
-	subtype: string;
 }
 
 /* Exporting Node Function */
@@ -141,6 +139,5 @@ function onLight(node: DeviceSubscribeNode, event: string[], packet: Packet.Pack
 		packet,
 	})
 }
-
 
 //#endregion

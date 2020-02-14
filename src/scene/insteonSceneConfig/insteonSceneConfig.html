@@ -14,13 +14,20 @@
 		inputs: 0,
 		outputs: 0,
 		icon: 'light.png',
-		label: function(){ return this.name || 'Insteon Scene' }
+		label: function(){
+
+			var label = this.name ? this.name
+								: this.scene ? 'Insteon Scene: ' + this.scene
+								: 'Insteon Scene';
+
+			return label;
+		}
 	});
 
 </script>
 
 <!-- Node Configuration -->
-<script type="text/x-red" data-template-name="insteon-scene-config">
+<script type="text/html" data-template-name="insteon-scene-config">
 	<div class="form-row">
 		<label for="node-config-input-modem">Insteon Modem</label>
 		<input type="text" id="node-config-input-modem" placeholder="/dev/usb123">
@@ -36,7 +43,7 @@
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="insteon-scene-config">
+<script type="text/html" data-help-name="insteon-scene-config">
 	<h3>Info</h3>
 	<p>Represents one insteon scene.</p>
 </script>

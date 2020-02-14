@@ -1,4 +1,3 @@
-/* Importing types */
 import { Red, NodeProperties } from 'node-red';
 import { ModemNode, InsteonModemConfigNode } from '../../types/types';
 import PLM, { Packet } from 'insteon-plm';
@@ -36,17 +35,18 @@ export = function(RED: Red){
 		this.PLMConfigNode.on('error', e => onError(this, e));
 		this.PLMConfigNode.on('packet', p => onPacket(this, p));
 
-		// Setting inital status
+		// Setting initial status
 		(this.PLMConfigNode.plm && this.PLMConfigNode.plm.connected)
 			? this.status({fill: 'green', shape: 'dot', text: 'Connected'})
 			: this.status({fill: 'red', shape: 'dot', text: 'Disconnected'});
 
-		// On input pass the messag
+		// On input pass the message
 		this.on('input', (msg) => onInput(msg, this));
 	});
 };
 
-/* Connection Function */
+
+//#region Connection handlers
 function onConnected(node: ModemNode){
 	/* Setting connected status */
 	node.status({fill: 'green', shape: 'dot', text: 'Connected'});
@@ -65,7 +65,9 @@ function onPacket(node: ModemNode, packet: Packet.Packet){
 	node.send({topic: 'packet', payload: packet});
 }
 
-/* Node RED Processing */
+//#endregion
+
+//#region Node-RED handlers
 async function onInput(msg: any, node: ModemNode){
 	/* Output holder */
 	let msgOut: any = {};
@@ -121,7 +123,9 @@ async function onInput(msg: any, node: ModemNode){
 	node.send(msgOut);
 }
 
-/* Process Functions */
+//#endregion
+
+//#region Message Processing
 async function getInfo(msg: any, plm: PLM){
 	/* Getting info from modem */
 	msg.payload = await plm.getInfo();
@@ -165,7 +169,6 @@ async function syncLinks(msg: any, plm: PLM){
 	return msg;
 }
 
-
 async function reset(msg: any, plm: PLM){
 	/* Getting info from modem */
 	msg.payload = await plm.reset();
@@ -197,14 +200,14 @@ async function close(msg: any, plm: PLM){
 
 async function sendCommand(msg: any, plm: PLM){
 	/* Getting info from modem */
-	msg.payload = await plm.sendStandardCommand(msg.device, msg.flags, msg.payload[0], msg.payload[1]);
+	msg.payload = await plm.sendStandardCommand(msg.device, msg.payload[0], msg.payload[1], msg.flags);
 
 	/* Returning info */
 	return msg;
 }
 async function sendExtendedCommand(msg: any, plm: PLM){
 	/* Getting info from modem */
-	msg.payload = await plm.sendExtendedCommand(msg.device, msg.flags, msg.payload[0], msg.payload[1], msg.data);
+	msg.payload = await plm.sendExtendedCommand(msg.device, msg.payload[0], msg.payload[1], msg.data, msg.flags);
 
 	/* Returning info */
 	return msg;
@@ -268,3 +271,5 @@ async function setLed(msg: any, plm: PLM){
 	/* Returning info */
 	return msg;
 }
+
+//#endregion

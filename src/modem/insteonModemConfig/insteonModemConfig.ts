@@ -3,6 +3,7 @@ import { Red, NodeProperties } from 'node-red';
 import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
 import { InsteonModemConfigNode } from '../../types/types';
 import { Request, Response } from 'express';
+import PowerLincModem from 'insteon-plm';
 
 /* Interfaces */
 interface PLMConfigNodeProps extends NodeProperties {
@@ -31,18 +32,27 @@ export = function(RED: Red){
 		setupPLM(this);
 	});
 
+	//#region Server Routes
+
 	// Setting up server to get serial nodes
 	RED.httpAdmin.get(
-		"/insteon-ports",                          // URL
-		RED.auth.needsPermission('serial.read'),   // Permission
-		getInsteonPorts                            // Get Devices as JSON
+		"/insteon/ports",
+		RED.auth.needsPermission('serial.read'),
+		getInsteonPorts
+	);
+
+	// Setting up server to get serial nodes
+	RED.httpAdmin.get(
+		'/insteon/modem/info',
+		RED.auth.needsPermission('serial.read'),
+		(req: any, res: any) => getInsteonInfo(RED, req, res)
 	);
 
 	/* Server to provide the PLM's Link database
 	 * The ajax call to this node must post the node_id of the modem config node
 	 */
 	RED.httpAdmin.get(
-		"/insteon-plm-getlinks",
+		"/insteon/modem/links",
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => getInsteonLinks(RED, req, res)
 	);
@@ -51,10 +61,12 @@ export = function(RED: Red){
 	 * The ajax call to this node must post the node_id of the modem config node
 	 */
 	RED.httpAdmin.post(
-		"/insteon-plm-manage-device",
+		"/insteon/device/manage",
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => manageDevice(RED, req, res)
 	);
+
+	//#endregion
 };
 
 //#region Connection Functions
@@ -84,18 +96,18 @@ function onConnected(node: InsteonModemConfigNode){
 
 	node.errored = false;
 
-	/* Emitting Status */
 	node.emit('connected');
 }
+
 function onDisconnected(node: InsteonModemConfigNode){
 	node.log('Disconnected');
 
-	/* Emitting Status */
 	node.emit('disconnected');
 
 	/* Setting up reconnection */
 	setTimeout(_ => setupPLM(node), reconnectTime)
 }
+
 function onError(node: InsteonModemConfigNode, error: Error){
 
 	if(!node.errored){
@@ -109,12 +121,12 @@ function onError(node: InsteonModemConfigNode, error: Error){
 	/* Setting up reconnection */
 	setTimeout(_ => setupPLM(node), reconnectTime);
 }
+
 function onPacket(node: InsteonModemConfigNode, packet: Packet.Packet){
-	/* Emitting Packet */
 	node.emit('packet', packet);
 }
+
 function onNodeClose(node: InsteonModemConfigNode){
-	/* Closing PLM */
 	removeOldPLM(node);
 }
 
@@ -130,10 +142,10 @@ async function getInsteonPorts(req: Request, res: Response){
 		res.json(devices);
 	}
 	catch(e){
-		res.status(500).send({message: 'An error has occured', caught: e});
+		res.status(500).send({message: 'An error has occured', error: e});
 	}
-
 }
+
 async function getInsteonLinks(RED: Red, req: Request, res: Response){
 
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
@@ -144,9 +156,10 @@ async function getInsteonLinks(RED: Red, req: Request, res: Response){
 		res.json(PLMConfigNode?.plm?.links ?? []);
 	}
 	catch(e){
-		res.status(500).send({message: 'An error has occured', caught: e});
+		res.status(500).send({message: 'An error has occured', error: e});
 	}
 }
+
 async function manageDevice(RED: Red, req: Request, res: Response){
 
 	try{
@@ -191,7 +204,38 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 
 	}
 	catch(e){
-		res.status(500).send({message: 'An error has occured', caught: e});
+		res.status(500).send({message: 'An error has occured', error: e});
+	}
+}
+
+async function getInsteonInfo(RED: Red, req: Request, res: Response){
+	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
+	try{
+		let path = req.query.path;
+
+		const plm = new PowerLincModem(path, {syncConfig: false, syncLinks: false});
+
+		plm.on('ready', () => {
+
+			const info = PowerLincModem.getDeviceInfo(plm.info.devcat, plm.info.subcat, plm.info.firmware);
+			const id = plm.info.id
+			res.json({
+				id,
+				info
+			});
+
+			plm.close();
+		});
+
+		plm.on('error', (e) => {
+			res.status(500).send({message: 'Error getting info', error: e});
+
+			plm.close();
+		})
+	}
+	catch(e){
+		console.error(e);
+		res.status(500).send({message: 'An error has occured', error: e});
 	}
 }
 
@@ -200,14 +244,11 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 //#region Clean up functions
 
 function removeOldPLM(node: InsteonModemConfigNode){
-	// Removing all listeners
 	node.plm?.removeAllListeners();
 
-	// Closing connection
 	if(node.plm?.connected)
 		node.plm.close();
 
-	// Killing ref
 	delete node.plm;
 }
 

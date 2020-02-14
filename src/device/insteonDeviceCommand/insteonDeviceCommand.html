@@ -14,7 +14,16 @@
 		inputs: 1,
 		outputs: 0,
 		icon: 'bridge.png',
-		label: function(){ return this.name || 'Device Out' },
+		label: function(){
+
+			var devicenode = RED.nodes.node(this.device);
+
+			var label = this.name ? this.name
+								: devicenode && devicenode.name ? devicenode.name + ' Out'
+								: 'Device Out';
+
+			return label;
+		},
 		paletteLabel: 'Device Out',
 	});
 
@@ -23,7 +32,7 @@
 </script>
 
 <!-- Node Configuration -->
-<script type="text/x-red" data-template-name="insteon-device-command">
+<script type="text/html" data-template-name="insteon-device-command">
 	<div class="form-row">
 		<label for="node-input-device">Insteon Device</label>
 		<input type="text" id="node-input-device" placeholder="xyz">
@@ -35,7 +44,31 @@
 </script>
 
 <!-- Help Panel -->
-<script type="text/x-red" data-help-name="insteon-device-command">
+<script type="text/html" data-help-name="insteon-device-command">
 	<h3>Info</h3>
-	<p>Send commands to an insteon device.</p>
+	<p>Send commands to an Insteon device.</p>
+
+	<h3>Topics</h3>
+	<ul>
+		<li>swtich</li>
+		<li>dim</li>
+	</ul>
+
+	<h3>Msg Formats</h3>
+	<b>Switch:</b>
+	<pre>
+{
+  status: 'on' | 'off' | 'instant',
+  fast?: boolean,
+  level?: 0-255
+}
+	</pre>
+
+	<b>Dim:</b>
+	<pre>
+{
+  dim: 'up' | 'down' | 'stop',
+  continuous?: boolean
+}
+	</pre>
 </script>

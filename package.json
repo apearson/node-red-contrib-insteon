@@ -13,18 +13,16 @@
 		"build:debug": "tsc -d --watch",
 		"copyFiles": "copyfiles -u 1 src/**/*.html dist/",
 		"debug": "ts-node ./test/debug",
-		"watch": "watch 'yarn run build' src",
+		"watch": "nodemon -w src -e ts,html,js,json --exec yarn run build",
 		"watch:files": "watch 'yarn run copyFiles' src"
 	},
 	"node-red": {
 		"nodes": {
 			"insteonModemConfig": "./dist/modem/insteonModemConfig/insteonModemConfig.js",
 			"insteonPowerLincModem": "./dist/modem/insteonPowerLincModem/insteonPowerLincModem.js",
-
 			"insteonDeviceConfig": "./dist/device/insteonDeviceConfig/insteonDeviceConfig.js",
 			"insteonDeviceSubscribe": "./dist/device/insteonDeviceSubscribe/insteonDeviceSubscribe.js",
 			"insteonDeviceCommand": "./dist/device/insteonDeviceCommand/insteonDeviceCommand.js",
-
 			"insteonSceneConfig": "./dist/scene/insteonSceneConfig/insteonSceneConfig.js",
 			"insteonSceneCommand": "./dist/scene/insteonSceneCommand/insteonSceneCommand.js"
 		}
@@ -36,12 +34,13 @@
 		"@types/node-red": "^0.20.0",
 		"@types/serialport": "^7.0.4",
 		"copyfiles": "^2.1.1",
+		"nodemon": "^2.0.2",
 		"ts-node": "^8.5.2",
 		"typescript": "^3.7.2",
 		"watch": "^1.0.2"
 	},
 	"dependencies": {
 		"@types/express": "^4.17.2",
-		"insteon-plm": "^0.3.7"
+		"insteon-plm": "^0.4.0"
 	}
 }

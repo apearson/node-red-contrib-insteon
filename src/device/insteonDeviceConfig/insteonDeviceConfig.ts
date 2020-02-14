@@ -11,14 +11,12 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
 import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../types/types';
-import { Byte, Packet, InsteonDevice } from 'insteon-plm';
+import { Byte } from 'insteon-plm';
 
 /* Interfaces */
 interface DeviceConfigNodeProps extends NodeProperties {
 	modem: string;
-	address1: string;
-	address2: string;
-	address3: string;
+	address: string;
 }
 
 /* Exporting Node Function */
@@ -30,7 +28,7 @@ export = function(RED: Red) {
 		RED.nodes.createNode(this, config);
 
 		// Converting config into address
-		this.address = [parseInt(config.address1, 16), parseInt(config.address2, 16), parseInt(config.address3, 16)] as Byte[];
+		this.address = config.address.split(".").map(_ => parseInt(_, 16)) as Byte[];
 
 		// Checking if we don't have a modem
 		if(!config.modem){
@@ -74,7 +72,7 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 	}
 
 	// Listeners
-	node.on('close', () => onNodeClose(node));
+	node.on('close', done => onNodeClose(node, done));
 
 	// Emitting on ready
 	node.device.once('ready', _ => {
@@ -87,9 +85,10 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 
 //#region Event Functions
 
-function onNodeClose(node: InsteonDeviceConfigNode){
-	/* Closing Device */
+function onNodeClose(node: InsteonDeviceConfigNode, done: ()=> void){
 	node.log('Closing device');
+
+	done();
 }
 
 //#endregion
