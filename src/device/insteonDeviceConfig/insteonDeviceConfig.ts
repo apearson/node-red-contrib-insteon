@@ -48,9 +48,10 @@ export = function(RED: Red) {
 
 async function setupDevice(node: InsteonDeviceConfigNode){
 
+
 	// Can't get the device if we don't have a modem
 	if(!node.PLMConfigNode || !node.PLMConfigNode.plm){
-		node.emit('status', 'No Modem Config');
+		node.emit('error', 'No Modem Config');
 		node.log('No modem config');
 		return;
 	}
@@ -62,11 +63,20 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 	}
 
 	// Instanciate the device for use
-	node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: true, syncLinks: false });
+	try{
+		node.device = await node.PLMConfigNode.plm.getDeviceInstance(node.address, { debug: false, syncInfo: false, syncLinks: false });
+
+		if(!node.device)
+			throw new Error('No Device Instance Found');
+	}
+	catch(error){
+		console.error(error);
+		node.emit('error', `Error: ${error.message}`)
+	}
 
 	// Checking we have a device
 	if(!node.device){
-		node.emit('status', 'No Device Instance');
+		// node.emit('error', 'No Device Instance');
 		node.log('No device instance');
 		return;
 	}
@@ -77,7 +87,7 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 	// Emitting on ready
 	node.device.once('ready', _ => {
 		node.log('Ready');
-		node.emit('ready', 'Listening')
+		node.emit('status', 'Listening')
 	});
 }
 
@@ -86,8 +96,6 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 //#region Event Functions
 
 function onNodeClose(node: InsteonDeviceConfigNode, done: ()=> void){
-	node.log('Closing device');
-
 	done();
 }
 

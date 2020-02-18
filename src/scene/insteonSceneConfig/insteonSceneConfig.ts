@@ -63,8 +63,6 @@ async function setupDevice(node: InsteonSceneConfigNode){
 //#region Event Functions
 
 function onNodeClose(node: InsteonSceneConfigNode){
-	/* Closing Device */
-	node.log('Closing scene\n');
 }
 
 //#endregion

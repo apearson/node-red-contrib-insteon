@@ -78,6 +78,7 @@ function setupPLM(node: InsteonModemConfigNode){
 
 	/* Creating Insteon PLM Object */
 	node.plm = new PLM(node.path);
+	node.plm.setMaxListeners(1000);
 
 	/* Waiting on events */
 	node.on('close', () => onNodeClose(node));

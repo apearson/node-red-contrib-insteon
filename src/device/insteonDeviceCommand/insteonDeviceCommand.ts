@@ -31,7 +31,8 @@ export = function(RED: Red){
 		this.deviceConfigNode = RED.nodes.getNode(props.device) as InsteonDeviceConfigNode;
 
 		/* Setting up PLM events */
-		this.deviceConfigNode.on('ready', p => onReady(this, p));
+		this.deviceConfigNode.on('status', p => onStatus(this, p));
+		this.deviceConfigNode.on('error', s => onError(this, s));
 
 		/* On input pass the message */
 		this.on('input', msg => onInput(msg, this));
@@ -40,10 +41,12 @@ export = function(RED: Red){
 
 //#region Event Functions
 
-function onReady(node: DeviceCommandNode, text: string){
-	node.log('Ready');
-
+function onStatus(node: DeviceCommandNode, text: string){
 	node.status({ fill: 'green', shape: 'dot', text });
+}
+
+function onError(node: DeviceCommandNode, text: string){
+	node.status({ fill: 'red', shape: 'dot', text });
 }
 
 async function onInput(msg: any, node: DeviceCommandNode){
