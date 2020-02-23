@@ -87,7 +87,7 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 	// Emitting on ready
 	node.device.once('ready', _ => {
 		node.log('Ready');
-		node.emit('status', 'Listening')
+		node.emit('status', 'Ready')
 	});
 }
 

@@ -32,11 +32,16 @@ export = function(RED: Red){
 		this.deviceConfigNode = RED.nodes.getNode(props.device) as InsteonDeviceConfigNode;
 
 		/* Setting up PLM events */
-		this.deviceConfigNode.on('ready', p => onReady(this, p));
+		this.deviceConfigNode.on('status', p => onStatus(this, p));
 	});
 };
 
 //#region Event Functions
+function onStatus(node: DeviceSubscribeNode, text: string){
+	text === 'Ready' ? onReady(node, text)
+	: node.error('Non supported status code:' + text);
+}
+
 
 function onReady(node: DeviceSubscribeNode, text: string){
 	node.log(`Ready`);
