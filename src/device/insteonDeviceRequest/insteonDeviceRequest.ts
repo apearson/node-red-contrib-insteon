@@ -1,12 +1,12 @@
 import { Red, NodeProperties, Node } from 'node-red';
-import { Byte } from 'insteon-plm';
+import { Byte, SwitchedLightingDevice } from 'insteon-plm';
 import { InsteonDeviceConfigNode } from '../../types/types';
 
-interface DeviceCommandNodeProps extends NodeProperties {
+interface DeviceRequestNodeProps extends NodeProperties {
 	device: string;
 }
 
-interface DeviceCommandNode extends Node {
+interface DeviceRequestNode extends Node {
 	deviceConfigNode?: InsteonDeviceConfigNode;
 	command: string;
 	onLevel: Byte;
@@ -16,7 +16,7 @@ interface DeviceCommandNode extends Node {
 /* Exporting Node Function */
 export = function(RED: Red){
 	/* Registering node type and a constructor */
-	RED.nodes.registerType('insteon-device-command', function(this: DeviceCommandNode, props: DeviceCommandNodeProps){
+	RED.nodes.registerType('insteon-device-request', function(this: DeviceRequestNode, props: DeviceRequestNodeProps){
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
 
@@ -48,39 +48,44 @@ export = function(RED: Red){
 
 //#region Event Functions
 
-function onStatus(node: DeviceCommandNode, text: string){
+function onStatus(node: DeviceRequestNode, text: string){
 	node.status({ fill: 'green', shape: 'dot', text });
 }
 
-function onError(node: DeviceCommandNode, text: string){
+function onError(node: DeviceRequestNode, text: string){
 	node.status({ fill: 'red', shape: 'dot', text });
 }
 
-async function onInput(msg: any, node: DeviceCommandNode){
-	const device = node.deviceConfigNode?.device as any;
+async function onInput(msg: any, node: DeviceRequestNode){
+	const device = node.deviceConfigNode?.device as SwitchedLightingDevice;
 
 	if(!device)
 		node.error('No Device');
 
 	let topic = msg.topic;
-	let command = msg.command;
+  let command = msg.command;
 
 	if(topic === 'switch'){
-		toggle(node, device, msg);
+		msg.payload = await toggle(node, device, msg);
 	}
 	else if(topic === 'dim'){
-		dim(node, device, msg);
-	}
+		msg.payload = await dim(node, device, msg);
+  }
+  else if(topic === 'status'){
+    msg.payload = await device.getDeviceStatus();
+  }
 	else{
 		node.error(`Unknown command: ${command}`);
-	}
+  }
+
+  node.send(msg);
 }
 
 //#endregion
 
 //#region Command Functions
 
-async function toggle(node: DeviceCommandNode, device: any, msg: any){
+async function toggle(node: DeviceRequestNode, device: any, msg: any){
 
 	// Grabbing status from msg payload
 	const status: string = msg?.payload?.status;
@@ -95,16 +100,16 @@ async function toggle(node: DeviceCommandNode, device: any, msg: any){
 
 	// Executing command
 	if(status == 'on')
-		fast ? device.LightOnFast() : device.LightOn(level);
+		return fast ? device.LightOnFast() : device.LightOn(level);
 	else if(status == 'off')
-		fast ? device.LightOffFast() : device.LightOff();
+		return fast ? device.LightOffFast() : device.LightOff();
 	else if(status == 'instant')
-		device.InstantOnOff(level)
+		return device.InstantOnOff(level)
 	else
 		node.error('Payload or Status in incorrect format');
 }
 
-async function dim(node: DeviceCommandNode, device: any, msg: any){
+async function dim(node: DeviceRequestNode, device: any, msg: any){
 
 	// Grabbing info from msg payload
 	const direction: string = msg?.payload?.dim;
@@ -118,11 +123,11 @@ async function dim(node: DeviceCommandNode, device: any, msg: any){
 
 	// Executing command
 	if(direction == 'up')
-		continuous ? device.BeginBrightening() : device.BrightenOneStep();
+		return continuous ? device.BeginBrightening() : device.BrightenOneStep();
 	else if(direction == 'down')
-		continuous ? device.BeginDimming() : device.DimOneStep();
+		return continuous ? device.BeginDimming() : device.DimOneStep();
 	else if(direction == 'stop')
-		device.StopChanging()
+		return device.StopChanging()
 	else
 		node.error('Payload or Status in incorrect format');
 }
