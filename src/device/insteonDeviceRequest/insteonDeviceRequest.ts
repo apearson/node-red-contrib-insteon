@@ -1,16 +1,9 @@
-import { Red, NodeProperties, Node } from 'node-red';
-import { Byte, SwitchedLightingDevice } from 'insteon-plm';
-import { InsteonDeviceConfigNode } from '../../types/types';
+import { Red, NodeProperties } from 'node-red';
+import { InsteonDeviceConfigNode, DeviceRequestNode } from '../../types/types';
+import { toggle, dim } from '../common/functions';
 
 interface DeviceRequestNodeProps extends NodeProperties {
 	device: string;
-}
-
-interface DeviceRequestNode extends Node {
-	deviceConfigNode?: InsteonDeviceConfigNode;
-	command: string;
-	onLevel: Byte;
-	onRamp: Byte;
 }
 
 /* Exporting Node Function */
@@ -57,7 +50,7 @@ function onError(node: DeviceRequestNode, text: string){
 }
 
 async function onInput(msg: any, node: DeviceRequestNode){
-	const device = node.deviceConfigNode?.device as SwitchedLightingDevice;
+	const device = node.deviceConfigNode?.device as any;
 
 	if(!device)
 		node.error('No Device');
@@ -79,57 +72,6 @@ async function onInput(msg: any, node: DeviceRequestNode){
   }
 
   node.send(msg);
-}
-
-//#endregion
-
-//#region Command Functions
-
-async function toggle(node: DeviceRequestNode, device: any, msg: any){
-
-	// Grabbing status from msg payload
-	const status: string = msg?.payload?.status;
-	const fast: boolean  = msg?.payload?.fast ?? false;
-	const level: Byte    = msg?.payload?.level ?? 0xFF;
-
-	// Checking status for correct format
-	if(status === undefined || (status !== 'off' && status !== 'on' && status != 'instant')){
-		node.error('Payload or Status in incorrect format');
-		return;
-	}
-
-	// Executing command
-	if(status == 'on')
-		return fast ? device.LightOnFast() : device.LightOn(level);
-	else if(status == 'off')
-		return fast ? device.LightOffFast() : device.LightOff();
-	else if(status == 'instant')
-		return device.InstantOnOff(level)
-	else
-		node.error('Payload or Status in incorrect format');
-}
-
-async function dim(node: DeviceRequestNode, device: any, msg: any){
-
-	// Grabbing info from msg payload
-	const direction: string = msg?.payload?.dim;
-	const continuous: boolean = msg?.payload?.continuous;
-
-	// Checking status for correct format
-	if(direction === undefined || (direction !== 'up' && direction !== 'down' && direction !== 'stop')){
-		node.error('Payload or Status in incorrect format');
-		return;
-	}
-
-	// Executing command
-	if(direction == 'up')
-		return continuous ? device.BeginBrightening() : device.BrightenOneStep();
-	else if(direction == 'down')
-		return continuous ? device.BeginDimming() : device.DimOneStep();
-	else if(direction == 'stop')
-		return device.StopChanging()
-	else
-		node.error('Payload or Status in incorrect format');
 }
 
 //#endregion

@@ -1,16 +1,9 @@
-import { Red, NodeProperties, Node } from 'node-red';
-import { Byte } from 'insteon-plm';
-import { InsteonDeviceConfigNode } from '../../types/types';
+import { Red, NodeProperties } from 'node-red';
+import { InsteonDeviceConfigNode, DeviceCommandNode } from '../../types/types';
+import { dim, toggle } from '../common/functions';
 
 interface DeviceCommandNodeProps extends NodeProperties {
 	device: string;
-}
-
-interface DeviceCommandNode extends Node {
-	deviceConfigNode?: InsteonDeviceConfigNode;
-	command: string;
-	onLevel: Byte;
-	onRamp: Byte;
 }
 
 /* Exporting Node Function */
@@ -74,57 +67,6 @@ async function onInput(msg: any, node: DeviceCommandNode){
 	else{
 		node.error(`Unknown command: ${command}`);
 	}
-}
-
-//#endregion
-
-//#region Command Functions
-
-async function toggle(node: DeviceCommandNode, device: any, msg: any){
-
-	// Grabbing status from msg payload
-	const status: string = msg?.payload?.status;
-	const fast: boolean  = msg?.payload?.fast ?? false;
-	const level: Byte    = msg?.payload?.level ?? 0xFF;
-
-	// Checking status for correct format
-	if(status === undefined || (status !== 'off' && status !== 'on' && status != 'instant')){
-		node.error('Payload or Status in incorrect format');
-		return;
-	}
-
-	// Executing command
-	if(status == 'on')
-		fast ? device.LightOnFast() : device.LightOn(level);
-	else if(status == 'off')
-		fast ? device.LightOffFast() : device.LightOff();
-	else if(status == 'instant')
-		device.InstantOnOff(level)
-	else
-		node.error('Payload or Status in incorrect format');
-}
-
-async function dim(node: DeviceCommandNode, device: any, msg: any){
-
-	// Grabbing info from msg payload
-	const direction: string = msg?.payload?.dim;
-	const continuous: boolean = msg?.payload?.continuous;
-
-	// Checking status for correct format
-	if(direction === undefined || (direction !== 'up' && direction !== 'down' && direction !== 'stop')){
-		node.error('Payload or Status in incorrect format');
-		return;
-	}
-
-	// Executing command
-	if(direction == 'up')
-		continuous ? device.BeginBrightening() : device.BrightenOneStep();
-	else if(direction == 'down')
-		continuous ? device.BeginDimming() : device.DimOneStep();
-	else if(direction == 'stop')
-		device.StopChanging()
-	else
-		node.error('Payload or Status in incorrect format');
 }
 
 //#endregion

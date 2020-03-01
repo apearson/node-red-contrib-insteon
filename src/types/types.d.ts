@@ -10,11 +10,11 @@ interface InsteonModemConfigNode extends Node {
 	errored: boolean;
 	plm?: PLM;
 }
-
 interface InsteonDeviceConfigNode extends Node {
 	address: Byte[];
 	PLMConfigNode?: InsteonModemConfigNode;
 	device?: InsteonDevice;
+	deviceType: string;
 }
 
 interface InsteonSceneConfigNode extends Node {
@@ -36,6 +36,20 @@ interface SceneSubscribeNode extends Node {
 
 interface SceneCommandNode extends Node {
 	sceneConfigNode?: InsteonSceneConfigNode;
+}
+
+interface DeviceCommandNode extends Node {
+	deviceConfigNode?: InsteonDeviceConfigNode;
+	command: string;
+	onLevel: Byte;
+	onRamp: Byte;
+}
+
+interface DeviceRequestNode extends Node {
+	deviceConfigNode?: InsteonDeviceConfigNode;
+	command: string;
+	onLevel: Byte;
+	onRamp: Byte;
 }
 
 //#endregion

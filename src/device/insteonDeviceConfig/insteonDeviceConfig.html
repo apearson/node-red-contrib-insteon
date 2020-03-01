@@ -9,7 +9,8 @@
 		defaults: {
 			modem: { value: '', type: 'insteon-modem-config' },
 			name: { value: '' },
-			address: { value: '' },
+			address: { value: '', validate: RED.validators.regex(/[0-9A-F]{2}.[0-9A-F]{2}.[0-9A-F]{2}/) },
+			deviceType: { value: '' },
 		},
 		inputs: 0,
 		outputs: 0,
@@ -32,6 +33,26 @@
 	<div class="form-row">
 		<label for="node-config-input-address"><i class="icon-tag"></i>Address</label>
 		<input type="text" id="node-config-input-address" placeholder="aa.bb.cc" />
+	</div>
+	<div class="form-row">
+		<label for="node-config-input-deviceType"><i class="icon-tag"></i>Device Type</label>
+		<select id="node-config-input-deviceType" style="width: 100%">
+			<optgroup label="Dimmable Lighting Control">
+				<option val="01:00">General Dimmable Lighting Device</option>
+			</optgroup>
+
+			<optgroup label="Switched Lighting Control">
+				<option val="02:00">General Switched Lighting Device</option>
+			</optgroup>
+
+			<optgroup label="Sensors and Actuators">
+				<option val="07:00">General Sensor & Actuator Device</option>
+			</optgroup>
+
+			<optgroup label="Security, Health, Safety">
+				<option val="10:00">Genera; Security Device</option>
+			</optgroup>
+		</select>
 	</div>
 </script>
 
