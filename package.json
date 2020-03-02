@@ -1,6 +1,6 @@
 {
 	"name": "node-red-contrib-insteon",
-	"version": "0.7.0",
+	"version": "0.7.1",
 	"description": "A library of Node-RED nodes for interacting with the Insteon home automation ecosystem",
 	"license": "MIT",
 	"keywords": [
