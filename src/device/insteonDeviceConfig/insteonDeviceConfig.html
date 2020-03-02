@@ -15,7 +15,53 @@
 		inputs: 0,
 		outputs: 0,
 		icon: 'light.png',
-		label: function(){ return this.name || 'Insteon Device' }
+		label: function(){ return this.name || 'Insteon Device' },
+
+		//#region Lifecycle Methods
+
+		oneditprepare: function(){
+			let node = this;
+
+			// Getting function library
+			let deviceConfig = RED.nodes.getType("insteon-device-config");
+
+			// Setting up lookup button
+			$('#node-config-lookup-deviceType').click(_ => deviceConfig.onLookupDeviceType(node));
+		 },
+
+		 //#endregion
+
+		//#region Handlers
+
+		onLookupDeviceType: function(node){
+			let deviceConfig = RED.nodes.getType("insteon-device-config");
+
+			let address = node.address;
+			let modemId = node.modem;
+
+			$.ajax({
+				method: 'GET',
+				dataType: "JSON",
+				url: `insteon/device/type?modemId=${modemId}&address=${address}`,
+				success: deviceConfig.onDeviceType,
+				failure: deviceConfig.onDeviceTypeFailure
+			});
+
+		},
+
+		onDeviceType: function(data){
+			// Getting device type from data
+			const deviceType = data.class;
+
+			// Setting device type box to correct value
+			$('#node-config-input-deviceType').val(deviceType);
+		},
+
+		onDeviceTypeFailure: function(error){
+			console.error(data);
+		}
+
+		//#endregion
 	});
 
 </script>
@@ -36,23 +82,35 @@
 	</div>
 	<div class="form-row">
 		<label for="node-config-input-deviceType"><i class="icon-tag"></i>Device Type</label>
-		<select id="node-config-input-deviceType" style="width: 100%">
-			<optgroup label="Dimmable Lighting Control">
-				<option val="01:00">General Dimmable Lighting Device</option>
+		<select id="node-config-input-deviceType" style="width: inital">
+			<optgroup label="General Devices">
+				<option value="InsteonDevice" selected="selected">Insteon Device</option>
 			</optgroup>
 
-			<optgroup label="Switched Lighting Control">
-				<option val="02:00">General Switched Lighting Device</option>
+			<optgroup label="Dimmable Lighting Controls">
+				<option value="DimmableLightingDevice">Dimmable Lighting Device</option>
+				<option value="KeypadDimmer">Keypad Dimmer</option>
 			</optgroup>
 
-			<optgroup label="Sensors and Actuators">
-				<option val="07:00">General Sensor & Actuator Device</option>
+			<optgroup label="Switched Lighting Controls">
+				<option value="SwitchedLightingDevice">Switched Lighting Device</option>
 			</optgroup>
 
-			<optgroup label="Security, Health, Safety">
-				<option val="10:00">Genera; Security Device</option>
+			<optgroup label="Sensors and Actuators Devices">
+				<option value="SensorActuatorDevice">Sensor & Actuator Device</option>
+				<option value="IOLinc">IO Linc</option>
+			</optgroup>
+
+			<optgroup label="Security, Health, Safety Devices">
+				<option value="SecurityDevice">Security Device</option>
+				<option value="MotionSensor">Motion Sensor</option>
+				<option value="LeakSensor">Leak Sensor</option>
+				<option value="OpenCloseSensor">Open Close Sensor</option>
 			</optgroup>
 		</select>
+		<a id='node-config-lookup-deviceType' class='red-ui-button'>
+			<i id='node-config-lookup-deviceType-icon' class='fa fa-search'></i>
+		</a>
 	</div>
 </script>
 

@@ -1,5 +1,5 @@
 import { Red, NodeProperties } from 'node-red';
-import { ModemNode, InsteonModemConfigNode } from '../../types/types';
+import { ModemNode, InsteonModemConfigNode } from '../../typings/types';
 import PLM, { Packet } from 'insteon-plm';
 
 interface insteonPLMProps extends NodeProperties{

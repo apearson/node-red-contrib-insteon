@@ -1,4 +1,4 @@
-import { DeviceRequestNode, DeviceCommandNode } from "../../types/types";
+import { DeviceRequestNode, DeviceCommandNode } from "../../typings/types";
 import { Byte } from "insteon-plm";
 
 //#region Command Functions

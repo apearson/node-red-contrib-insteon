@@ -13,7 +13,7 @@ interface InsteonModemConfigNode extends Node {
 interface InsteonDeviceConfigNode extends Node {
 	address: Byte[];
 	PLMConfigNode?: InsteonModemConfigNode;
-	device?: InsteonDevice;
+	device?: InsteonDevice | null;
 	deviceType: string;
 }
 

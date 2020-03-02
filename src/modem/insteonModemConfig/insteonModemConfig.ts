@@ -1,9 +1,8 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import PLM, { Byte, Packet, Utilities } from 'insteon-plm';
-import { InsteonModemConfigNode } from '../../types/types';
+import PowerLincModem, { Byte, Packet, Utilities } from 'insteon-plm';
+import { InsteonModemConfigNode } from '../../typings/types';
 import { Request, Response } from 'express';
-import PowerLincModem from 'insteon-plm';
 
 /* Interfaces */
 interface PLMConfigNodeProps extends NodeProperties {
@@ -34,32 +33,30 @@ export = function(RED: Red){
 
 	//#region Server Routes
 
-	// Setting up server to get serial nodes
 	RED.httpAdmin.get(
 		"/insteon/ports",
 		RED.auth.needsPermission('serial.read'),
 		getInsteonPorts
 	);
 
-	// Setting up server to get serial nodes
 	RED.httpAdmin.get(
 		'/insteon/modem/info',
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => getInsteonInfo(RED, req, res)
 	);
 
-	/* Server to provide the PLM's Link database
-	 * The ajax call to this node must post the node_id of the modem config node
-	 */
 	RED.httpAdmin.get(
 		"/insteon/modem/links",
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => getInsteonLinks(RED, req, res)
 	);
 
-	/* Server to link or unlink a device from the PLM's Link database
-	 * The ajax call to this node must post the node_id of the modem config node
-	 */
+	RED.httpAdmin.get(
+		"/insteon/device/type",
+		RED.auth.needsPermission('serial.read'),
+		(req: any, res: any) => getDeviceType(RED, req, res)
+	);
+
 	RED.httpAdmin.post(
 		"/insteon/device/manage",
 		RED.auth.needsPermission('serial.read'),
@@ -77,7 +74,7 @@ function setupPLM(node: InsteonModemConfigNode){
 	removeOldPLM(node);
 
 	/* Creating Insteon PLM Object */
-	node.plm = new PLM(node.path);
+	node.plm = new PowerLincModem(node.path);
 	node.plm.setMaxListeners(1000);
 
 	/* Waiting on events */
@@ -138,7 +135,7 @@ function onNodeClose(node: InsteonModemConfigNode){
 async function getInsteonPorts(req: Request, res: Response){
 
 	try{
-		const devices = await PLM.getPlmDevices();
+		const devices = await PowerLincModem.getPlmDevices();
 
 		res.json(devices);
 	}
@@ -151,7 +148,7 @@ async function getInsteonLinks(RED: Red, req: Request, res: Response){
 
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
-		let PLMConfigNode = validatePLMConnection(RED, req.query.id);
+		let PLMConfigNode = RED.nodes.getNode(req.query.id) as InsteonModemConfigNode;
 
 		/* Send the links back to the client */
 		res.json(PLMConfigNode?.plm?.links ?? []);
@@ -164,7 +161,7 @@ async function getInsteonLinks(RED: Red, req: Request, res: Response){
 async function manageDevice(RED: Red, req: Request, res: Response){
 
 	try{
-		let PLMConfigNode = validatePLMConnection(RED, req.query.id);
+		let PLMConfigNode = RED.nodes.getNode(req.query.id) as InsteonModemConfigNode;
 
 		/* Validate the device address */
 		let address = Utilities.toAddressArray(req.query.address) as Byte[];
@@ -240,6 +237,27 @@ async function getInsteonInfo(RED: Red, req: Request, res: Response){
 	}
 }
 
+async function getDeviceType(RED: Red, req: Request, res: Response){
+
+	const address = req.query.address.split('.').map((_: string) => parseInt(_, 16));
+	const modemId = req.query.modemId;
+
+	try{
+		let PLMConfigNode = RED.nodes.getNode(modemId) as InsteonModemConfigNode;
+
+		const info = await PLMConfigNode?.plm?.queryDeviceInfo(address, {syncInfo: true, syncLinks: false, debug: false});
+
+		if(!info)
+			res.status(500).send({message: 'An error has occured while getting device info'});
+
+		/* Send the links back to the client */
+		res.json(info);
+	}
+	catch(e){
+		res.status(500).send({message: 'An error has occured', error: e});
+	}
+}
+
 //#endregion
 
 //#region Clean up functions
@@ -256,25 +274,5 @@ function removeOldPLM(node: InsteonModemConfigNode){
 //#endregion
 
 //#region Utlity Functions
-
-/* Function that takes a node.id and returns the node if it is valid
- * The node must be a PLMConfig node, and the PLM must be connected
- */
-function validatePLMConnection(RED: Red, configNodeId: string){
-	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
-	let PLMConfigNode = RED.nodes.getNode(configNodeId) as InsteonModemConfigNode;
-
-	/* Validate that the nodeId received is referencing a PLMConfig node */
-	if(PLMConfigNode == null || PLMConfigNode.type !== 'insteon-modem-config' )
-		throw Error("Invalid config node specified.");
-
-	/* Check to see if the Config Node is connected to the PLM. If the node hasn't been deployed yet, it won't be connected
-	 * The best thing would be to connect, get/return the links then disconnect, but for now we will just send an error
-	 */
-	if(PLMConfigNode.plm === null || !PLMConfigNode.plm?.connected)
-		throw Error("The PLM is not connected. Cannot load links.");
-
-	return PLMConfigNode;
-}
 
 //#endregion

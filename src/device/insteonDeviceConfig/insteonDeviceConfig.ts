@@ -10,8 +10,8 @@
 
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../types/types';
-import PowerLincModem, { Byte, KeypadDimmer, DimmableLightingDevice, SwitchedLightingDevice, IOLinc, SensorActuatorDevice, MotionSensor, OpenCloseSensor, LeakSensor, SecurityDevice, InsteonDevice } from 'insteon-plm';
+import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../typings/types';
+import PowerLincModem, { Byte, KeypadDimmer, DimmableLightingDevice, SwitchedLightingDevice, IOLinc, SensorActuatorDevice, MotionSensor, OpenCloseSensor, LeakSensor, SecurityDevice, InsteonDevice, Utilities } from 'insteon-plm';
 
 /* Interfaces */
 interface DeviceConfigNodeProps extends NodeProperties {
@@ -68,8 +68,6 @@ async function setupDevice(node: InsteonDeviceConfigNode){
 	try{
 		node.device = await getDeviceInstance(node, node.PLMConfigNode.plm);
 
-		node.log(`[${node.address}]: ${node.device.constructor.name}`);
-
 		if(!node.device)
 			throw new Error('No Device Instance Found');
 	}
@@ -109,56 +107,11 @@ function onNodeClose(node: InsteonDeviceConfigNode, done: ()=> void){
 
 async function getDeviceInstance(node: InsteonDeviceConfigNode, plm: PowerLincModem){
 
-	node.log(node.deviceType);
-
-	if(!node.deviceType){
-		node.log('Querying device');
-		return await plm.getDeviceInstance(node.address, { debug: false, syncInfo: false, syncLinks: false });
-	}
-
-	const type = node.deviceType.split(':');
-	const cat = Number(type[0]);
-	const subcat = Number(type[1]);
 	const options = { debug: false, syncInfo: false, syncLinks: false };
 
-	switch(cat){
-		case 0x01:
-			switch(subcat){
-				case 0x1C: return new KeypadDimmer(node.address, plm, options);
-				default: return new DimmableLightingDevice(node.address, plm, options);
-			}
+	const DeviceClass = await Utilities.getDeviceClassFromClassName(node.deviceType);
 
-		case 0x02: return new SwitchedLightingDevice(node.address, plm, options);
-
-		case 0x07:
-			switch(subcat){
-				case 0x00: return new IOLinc(node.address, plm, options);
-				default: return new SensorActuatorDevice(node.address, plm, options);
-			}
-
-		case 0x10:
-			switch(subcat){
-				case 0x01:
-				case 0x03:
-				case 0x04:
-				case 0x05: return new MotionSensor(node.address, plm, options);
-
-				case 0x02:
-				case 0x06:
-				case 0x07:
-				case 0x09:
-				case 0x11:
-				case 0x14:
-				case 0x015: return new OpenCloseSensor(node.address, plm, options);
-
-				case 0x08: return new LeakSensor(node.address, plm, options);
-
-				default: return new SecurityDevice(node.address, plm, options);
-			}
-
-		default: return new InsteonDevice(node.address, plm, options);
-	}
-
+	return DeviceClass ? new DeviceClass(node.address, plm, options) : null;
 }
 
 //#endregion

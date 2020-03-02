@@ -1,5 +1,5 @@
 import { Red, NodeProperties } from 'node-red';
-import { InsteonDeviceConfigNode, DeviceRequestNode } from '../../types/types';
+import { InsteonDeviceConfigNode, DeviceRequestNode } from '../../typings/types';
 import { toggle, dim } from '../common/functions';
 
 interface DeviceRequestNodeProps extends NodeProperties {

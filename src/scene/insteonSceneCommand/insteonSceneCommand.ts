@@ -1,5 +1,5 @@
 import { Red, NodeProperties } from 'node-red';
-import { InsteonSceneConfigNode, SceneCommandNode } from '../../types/types';
+import { InsteonSceneConfigNode, SceneCommandNode } from '../../typings/types';
 import PowerLincModem, { Byte } from 'insteon-plm';
 
 interface SceneSubscribeConfigNodeProps extends NodeProperties {

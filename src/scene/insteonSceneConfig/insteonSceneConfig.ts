@@ -1,6 +1,6 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import { InsteonModemConfigNode, InsteonSceneConfigNode } from '../../types/types';
+import { InsteonModemConfigNode, InsteonSceneConfigNode } from '../../typings/types';
 
 /* Interfaces */
 interface SceneConfigNodeProps extends NodeProperties {

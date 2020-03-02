@@ -1,6 +1,6 @@
 import { Red, NodeProperties, Node } from 'node-red';
 import { Packet } from 'insteon-plm';
-import { InsteonDeviceConfigNode } from '../../types/types';
+import { InsteonDeviceConfigNode } from '../../typings/types';
 
 interface SubscribeConfigNodeProps extends NodeProperties {
 	device: string;
