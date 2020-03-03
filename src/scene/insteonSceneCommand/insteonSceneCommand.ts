@@ -39,8 +39,6 @@ export = function(RED: Red){
 //#region Event Functions
 
 function onReady(node: SceneCommandNode, text: string){
-	node.log('Ready');
-
 	node.status({ fill: 'green', shape: 'dot', text });
 
 	node.send({topic: 'ready', payload: text});

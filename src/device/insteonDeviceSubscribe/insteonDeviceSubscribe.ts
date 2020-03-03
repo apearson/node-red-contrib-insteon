@@ -50,8 +50,6 @@ function onStatus(node: DeviceSubscribeNode, text: string){
 
 
 function onReady(node: DeviceSubscribeNode, text: string){
-	node.log(`Ready`);
-
 	node.status({ fill: 'green', shape: 'dot', text });
 
 	node.send({ topic: 'ready', payload: text });
