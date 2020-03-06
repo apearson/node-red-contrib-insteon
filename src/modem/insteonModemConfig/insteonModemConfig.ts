@@ -118,6 +118,11 @@ function onConnected(node: InsteonModemConfigNode){
 	node.log('Connected');
 
 	node.errored = false;
+	
+	/* As soon as the modem is ready, load the links since the device factory
+	 * method depends on the linkData to create device instances
+	 */
+	node.plm?.syncLinks();
 
 	/* Emitting Status */
 	node.emit('connected');
@@ -200,12 +205,23 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 		}
 
 		let address = Utilities.toAddressArray(req.body.address) as Byte[];
+		let device: any;
 
 		let result: any;
 		let messageVerb = "";
 		let deviceCache = {} as any;
 		
 		if(req.body.action === 'addNewDevice'){
+			/* First check to see if the device is already linked to the modem */
+			try{
+				device = PLMConfigNode.plm?.getDeviceInstance(address);
+			}catch(e){
+				
+			}
+			
+			if(device === undefined){
+			
+			}
 			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Linking Device...'});
 			try{
 				result = await PLMConfigNode?.plm?.linkDevice(address);
@@ -233,7 +249,7 @@ async function manageDevice(RED: Red, req: Request, res: Response){
 
 			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Creating Device Instance...'});
 			
-			let device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false, cache: deviceCache });
+			device = await PLMConfigNode.plm?.getDeviceInstance(address, { debug: false, syncInfo: false, syncLinks: false, cache: deviceCache });
 
 			PLMConfigNode.status({fill: 'yellow', shape: 'dot', text: 'Loading Device Config...'});
 			
