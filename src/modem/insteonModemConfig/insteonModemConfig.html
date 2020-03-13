@@ -23,23 +23,19 @@
 			try { $('#node-config-input-path').autocomplete( 'destroy' ); }
 			catch(err) { }
 
+			// Rendering settings
+			insteon.renderTabs();
+
 			// PLM Info
 			if(node.path != '')
-				insteon.getModemInfo(node.path, insteon.renderModemInfo, e => sendErrorToDebugConsole(node.id, e))
+				insteon.getModemInfo(node.path, insteon.renderModemInfo, e => node.error(e));
 
 			// Setting up lookup button
 			$('#node-config-lookup-modems').click(insteon.onLookupPaths);
 			$('#node-config-info-modems').click(insteon.onGetInfo);
 
 			// PLM links table
-			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => sendErrorToDebugConsole(node.id, e));
-
-			// Setting up settings acordiion
-			$('#accordion').accordion({heightStyle: 'content', collapsible: true});
-
-			// Add device UI
-			$('#add_device').click(insteon.onAddDevice);
-			$('#remove_device').click(insteon.onRemoveDevice);
+			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => node.error(e));
 		 },
 
 		 //#endregion
@@ -203,6 +199,32 @@
 			$('#insteon-desc').text(descString);
 		},
 
+		renderTabs: function(){
+			// Getting function library
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			// Creating tabs with on change function
+			let tabs = RED.tabs.create({
+				id: "insteon-modem-config-tabs",
+				onchange: function(tab) {
+					$("#insteon-modem-config-tabs-content").children().hide();
+					$("#" + tab.id).show();
+				}
+			});
+
+			// Adding tabs
+			tabs.addTab({
+				id: "insteon-modem-config-tab-database",
+				label: "Database"
+			});
+
+			tabs.addTab({
+				id: "insteon-modem-config-tab-scenes",
+				label: "Scenes"
+			});
+
+		},
+
 		//#endregion
 
 		//#region Data Fetching Methods
@@ -299,13 +321,6 @@
 			) || null;
 		 },
 
-		/* This is not conventional, but we need a way to output error messages to the debug window in case the ajax call fails
-		 * node.error() is not in context for ajax calls
-		 */
-		sendErrorToDebugConsole: function(name, message){
-			RED.debug.handleDebugMessage({ name: name, msg: message, level: 20 });
-		}
-
 		 //#endregion
 	});
 
@@ -313,18 +328,25 @@
 
 <!-- Node Configuration -->
 <script type='text/html' data-template-name='insteon-modem-config'>
+
+	<!-- Main Settings -->
 	<div class='form-row'>
 		<h2>Settings</h2>
+
 		<label for='node-config-input-path'>Path</label>
+
 		<input type='text' id='node-config-input-path' style='width:60%;'>
+
 		<a id='node-config-lookup-modems' class='red-ui-button'>
 			<i id='node-config-lookup-modems-icon' class='fa fa-search'></i>
 		</a>
+
 		<a id='node-config-info-modems' class='red-ui-button'>
 			<i id='node-config-info-modems-icon' class='fa fa-info'></i>
 		</a>
 	</div>
 
+	<!-- Info -->
 	<div class='form-row'>
 		<h2>Info</h2>
 		<div>
@@ -335,28 +357,41 @@
 		</div>
 	</div>
 
-	<div class='form-row' >
-		<h2>Database</h2>
+	<!-- Tab Strip -->
+	<div class="form-row">
+		<ul style="margin-bottom: 20px;" id="insteon-modem-config-tabs" />
+	</div>
 
-		<div id='accordion'>
-			<h3>PLM Insteon Link Database</h3>
-			<div>
-				<p id='linkMessage'>Links can only be displayed after the PLM is connected.</p>
-				<table width='100%'>
-					<thead>
-						<tr>
-							<th style='text-align: left;'>Type</th>
-							<th style='text-align: left;'>Device</th>
-							<th style='text-align: left;'>Group</th>
-							<th style='text-align: left;'>&nbsp;</th>
-						</tr>
-					</thead>
-					<tbody id='links'></tbody>
-				</table>
+	<!-- Tab Content -->
+	<div id="insteon-modem-config-tabs-content" style="min-height:150px;">
+		<!-- Database Tab -->
+		<div id="insteon-modem-config-tab-database" style="display:none">
+			<div class="form-row">
+				<!-- Database Content -->
+				<div>
+					<p id='linkMessage'>Links can only be displayed after the PLM is connected.</p>
+					<table width='100%'>
+						<thead>
+							<tr>
+								<th style='text-align: left;'>Type</th>
+								<th style='text-align: left;'>Device</th>
+								<th style='text-align: left;'>Group</th>
+							</tr>
+						</thead>
+						<tbody id='links'></tbody>
+					</table>
+				</div>
+
+			</div>
+		</div>
+
+		<!-- Scenes Tab -->
+		<div id="insteon-modem-config-tab-scenes" style="display:none">
+			<div class="form-row">
+				This is the scenes tab
 			</div>
 		</div>
 	</div>
-
 </script>
 
 <!-- Help Panel -->
