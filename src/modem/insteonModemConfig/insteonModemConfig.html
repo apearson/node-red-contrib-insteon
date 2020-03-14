@@ -200,26 +200,23 @@
 		},
 
 		renderTabs: function(){
-			// Getting function library
-			let insteon = RED.nodes.getType("insteon-modem-config");
-
 			// Creating tabs with on change function
 			let tabs = RED.tabs.create({
-				id: "insteon-modem-config-tabs",
+				id: "node-config-tabs",
 				onchange: function(tab) {
-					$("#insteon-modem-config-tabs-content").children().hide();
+					$("#node-config-tabs-content").children().hide();
 					$("#" + tab.id).show();
 				}
 			});
 
 			// Adding tabs
 			tabs.addTab({
-				id: "insteon-modem-config-tab-database",
+				id: "node-config-tab-database",
 				label: "Database"
 			});
 
 			tabs.addTab({
-				id: "insteon-modem-config-tab-scenes",
+				id: "node-config-tab-scenes",
 				label: "Scenes"
 			});
 
@@ -359,13 +356,13 @@
 
 	<!-- Tab Strip -->
 	<div class="form-row">
-		<ul style="margin-bottom: 20px;" id="insteon-modem-config-tabs" />
+		<ul style="margin-bottom: 20px;" id="node-config-tabs" />
 	</div>
 
 	<!-- Tab Content -->
-	<div id="insteon-modem-config-tabs-content" style="min-height:150px;">
+	<div id="node-config-tabs-content" style="min-height:150px;">
 		<!-- Database Tab -->
-		<div id="insteon-modem-config-tab-database" style="display:none">
+		<div id="node-config-tab-database" style="display:none">
 			<div class="form-row">
 				<!-- Database Content -->
 				<div>
@@ -386,7 +383,7 @@
 		</div>
 
 		<!-- Scenes Tab -->
-		<div id="insteon-modem-config-tab-scenes" style="display:none">
+		<div id="node-config-tab-scenes" style="display:none">
 			<div class="form-row">
 				This is the scenes tab
 			</div>

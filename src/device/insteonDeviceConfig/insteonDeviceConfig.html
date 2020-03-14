@@ -25,11 +25,41 @@
 			// Getting function library
 			let deviceConfig = RED.nodes.getType("insteon-device-config");
 
+			// Rendering settings
+			deviceConfig.renderTabs();
+
 			// Setting up lookup button
 			$('#node-config-lookup-deviceType').click(_ => deviceConfig.onLookupDeviceType(node));
 		 },
 
-		 //#endregion
+		//#endregion
+
+		//#region Render Methods
+
+		renderTabs: function(){
+
+			// Creating tabs with on change function
+			let tabs = RED.tabs.create({
+				id: "node-config-tabs",
+				onchange: function(tab) {
+					$("#node-config-tabs-content").children().hide();
+					$("#" + tab.id).show();
+				}
+			});
+
+			// Adding tabs
+			tabs.addTab({
+				id: "node-config-tab-database",
+				label: "Database"
+			});
+
+			tabs.addTab({
+				id: "node-config-tab-scenes",
+				label: "Scenes"
+			});
+		},
+
+		//#endregion
 
 		//#region Handlers
 
@@ -68,21 +98,28 @@
 
 <!-- Node Configuration -->
 <script type="text/html" data-template-name="insteon-device-config">
+	<!-- Modem -->
 	<div class="form-row">
 		<label for="node-config-input-modem">Insteon Modem</label>
 		<input type="text" id="node-config-input-modem" placeholder="/dev/usb123">
 	</div>
+
+	<!-- Name -->
 	<div class="form-row">
 		<label for="node-config-input-name"><i class="icon-tag"></i> Name</label>
 		<input type="text" id="node-config-input-name" placeholder="Name">
 	</div>
+
+	<!-- Address -->
 	<div class="form-row">
 		<label for="node-config-input-address"><i class="icon-tag"></i>Address</label>
 		<input type="text" id="node-config-input-address" placeholder="aa.bb.cc" />
 	</div>
+
+	<!-- Device Type -->
 	<div class="form-row">
-		<label for="node-config-input-deviceType"><i class="icon-tag"></i>Device Type</label>
-		<select id="node-config-input-deviceType" style="width: inital">
+		<label for="node-config-deviceType"><i class="icon-tag"></i>Device Type</label>
+		<select id="node-config-deviceType" style="width: inital">
 			<optgroup label="General Devices">
 				<option value="InsteonDevice" selected="selected">Insteon Device</option>
 			</optgroup>
@@ -108,10 +145,46 @@
 				<option value="OpenCloseSensor">Open Close Sensor</option>
 			</optgroup>
 		</select>
+
+		<!-- Device Type Search Button -->
 		<a id='node-config-lookup-deviceType' class='red-ui-button'>
 			<i id='node-config-lookup-deviceType-icon' class='fa fa-search'></i>
 		</a>
 	</div>
+
+	<!-- Tab Strip -->
+	<div class="form-row">
+		<ul style="margin-bottom: 20px;" id="node-config-tabs" />
+	</div>
+
+	<!-- Tab Content -->
+	<div id="node-config-tabs-content" style="min-height:150px;">
+		<!-- Database Tab -->
+		<div id="node-config-tab-database" style="display:none">
+			<div class="form-row">
+				<!-- Database Content -->
+				<div>
+					<p id='linkMessage'>Links can only be displayed after the PLM is connected.</p>
+					<table width='100%'>
+						<thead>
+							<tr>
+								<th style='text-align: left;'>Type</th>
+								<th style='text-align: left;'>Device</th>
+								<th style='text-align: left;'>Group</th>
+							</tr>
+						</thead>
+						<tbody id='links'></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!-- Scenes Tab -->
+		<div id="node-config-tab-scenes" style="display:none">
+			<div class="form-row">
+				This is the scenes tab
+			</div>
+		</div>
 </script>
 
 <!-- Help Panel -->
