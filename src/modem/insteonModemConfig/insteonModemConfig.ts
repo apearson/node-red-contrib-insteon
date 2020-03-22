@@ -1,7 +1,7 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
 import PowerLincModem, { Byte, Packet, Utilities } from 'insteon-plm';
-import { InsteonModemConfigNode } from '../../typings/types';
+import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../typings/types';
 import { Request, Response } from 'express';
 
 /* Interfaces */
@@ -55,6 +55,12 @@ export = function(RED: Red){
 		"/insteon/device/type",
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => getDeviceType(RED, req, res)
+	);
+
+	RED.httpAdmin.get(
+		"/insteon/device/database",
+		RED.auth.needsPermission('serial.read'),
+		(req: any, res: any) => getDeviceDatabase(RED, req, res)
 	);
 
 	RED.httpAdmin.post(
@@ -256,6 +262,25 @@ async function getDeviceType(RED: Red, req: Request, res: Response){
 	catch(e){
 		res.status(500).send({message: 'An error has occured', error: e});
 	}
+}
+
+async function getDeviceDatabase(RED: Red, req: Request, res: Response){
+
+	const deviceId = req.query.deviceId;
+
+	try{
+		let PLMConfigNode = RED.nodes.getNode(deviceId) as InsteonDeviceConfigNode;
+
+		const database = await PLMConfigNode?.device?.getDatabase();
+
+		/* Send the links back to the client */
+		database ? res.json(database)
+		         : res.status(500).send({message: 'An error has occured while getting device info'});
+	}
+	catch(e){
+		res.status(500).send({message: 'An error has occured', error: e});
+	}
+
 }
 
 //#endregion

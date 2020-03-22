@@ -30,6 +30,9 @@
 
 			// Setting up lookup button
 			$('#node-config-lookup-deviceType').click(_ => deviceConfig.onLookupDeviceType(node));
+			$('#node-config-sync-database').click(_ => deviceConfig.onSyncDatabase(node));
+
+			// deviceConfig.getDatabase(node.id, console.log, console.error);
 		 },
 
 		//#endregion
@@ -57,6 +60,41 @@
 				id: "node-config-tab-scenes",
 				label: "Scenes"
 			});
+		},
+
+		renderDatabaseTable: function(records){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			let deviceConfig = RED.nodes.getType("insteon-device-config");
+
+			// Looping over links
+			for (let link of records){
+
+				//Grabbing data from links
+				let address = `0x${link.address.map(a => insteon.toHex(a).substring(2).toUpperCase()).join('')}`;
+				let active = link.Type.active ? '✓' : '×';
+				let type = link.Type.control === 1 ? 'Controller' : 'Responder';
+				let group = link.group.toString();
+				let device = link.device.map(insteon.toHex).map(a => a.substring(2)).join('.').toUpperCase();
+				let level = link.onLevel.toString();
+				let rate = link.rampRate.toString();
+				let highWater = link.Type.highWater ? '~' : '-';
+
+				let recordRow = $('<tr>', { style:'white-space:nowrap' } );
+
+				$('<td>', {html: address}).appendTo(recordRow);
+				$('<td>', {html: active}).appendTo(recordRow);
+				$('<td>', {html: device}).appendTo(recordRow);
+				$('<td>', {html: type}).appendTo(recordRow);
+				$('<td>', {html: group}).appendTo(recordRow);
+				$('<td>', {html: level}).appendTo(recordRow);
+				$('<td>', {html: rate}).appendTo(recordRow);
+				$('<td>', {html: highWater}).appendTo(recordRow);
+
+				// Appending device row to links table
+				recordRow.appendTo($('#node-config-database-body'));
+			}
+
+
 		},
 
 		//#endregion
@@ -89,7 +127,27 @@
 
 		onDeviceTypeFailure: function(error){
 			console.error(data);
-		}
+		},
+
+		onSyncDatabase: function(node){
+			let deviceConfig = RED.nodes.getType("insteon-device-config");
+
+			deviceConfig.getDatabase(node.id, deviceConfig.renderDatabaseTable, console.error);
+		},
+
+		//#endregion
+
+		//#region Data Methods
+
+		getDatabase: function(id, success, error){
+			$.ajax({
+				method: 'GET',
+				dataType: "JSON",
+				url: 'insteon/device/database?deviceId=' + id,
+				success,
+				error
+			});
+		},
 
 		//#endregion
 	});
@@ -164,16 +222,23 @@
 			<div class="form-row">
 				<!-- Database Content -->
 				<div>
-					<p id='linkMessage'>Links can only be displayed after the PLM is connected.</p>
+					<a id='node-config-sync-database' class='red-ui-button' style="width: 100%">
+						<i id='node-config-sync-database-icon' class='fa fa-refresh'/> Sync Database
+					</a>
 					<table width='100%'>
 						<thead>
 							<tr>
-								<th style='text-align: left;'>Type</th>
+								<th style='text-align: left;'>Address</th>
+								<th style='text-align: left;'>Active</th>
 								<th style='text-align: left;'>Device</th>
+								<th style='text-align: left;'>Type</th>
 								<th style='text-align: left;'>Group</th>
+								<th style='text-align: left;'>Level</th>
+								<th style='text-align: left;'>Rate</th>
+								<th style='text-align: left;'>~</th>
 							</tr>
 						</thead>
-						<tbody id='links'></tbody>
+						<tbody id='node-config-database-body'></tbody>
 					</table>
 				</div>
 			</div>

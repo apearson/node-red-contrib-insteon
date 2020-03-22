@@ -318,6 +318,10 @@
 			) || null;
 		 },
 
+		 toHex: function(n){
+			return `0x${n.toString(16).toUpperCase().padStart(2, '0')}`;
+		}
+
 		 //#endregion
 	});
 
