@@ -221,7 +221,7 @@ async function getInsteonInfo(RED: Red, req: Request, res: Response){
 
 		plm.on('ready', () => {
 
-			const info = PowerLincModem.getDeviceInfo(plm.info.devcat, plm.info.subcat, plm.info.firmware);
+			const info = PowerLincModem.getFullDeviceInfo(plm.info.devcat, plm.info.subcat, plm.info.firmware);
 			const id = plm.info.id
 			res.json({
 				id,
@@ -251,7 +251,7 @@ async function getDeviceType(RED: Red, req: Request, res: Response){
 	try{
 		let PLMConfigNode = RED.nodes.getNode(modemId) as InsteonModemConfigNode;
 
-		const info = await PLMConfigNode?.plm?.queryDeviceInfo(address, {syncInfo: true, syncLinks: false, debug: false});
+		const info = await PLMConfigNode?.plm?.queryFullDeviceInfo(address);
 
 		if(!info)
 			res.status(500).send({message: 'An error has occured while getting device info'});

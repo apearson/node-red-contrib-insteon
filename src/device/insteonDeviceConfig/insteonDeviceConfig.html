@@ -118,11 +118,8 @@
 		},
 
 		onDeviceType: function(data){
-			// Getting device type from data
-			const deviceType = data.class;
-
 			// Setting device type box to correct value
-			$('#node-config-input-deviceType').val(deviceType);
+			$('#node-config-deviceType').val(data.class);
 		},
 
 		onDeviceTypeFailure: function(error){
@@ -156,6 +153,11 @@
 
 <!-- Node Configuration -->
 <script type="text/html" data-template-name="insteon-device-config">
+	<style>
+		tr:nth-child(even) {
+			background-color: #eee;
+		}
+	</style>
 	<!-- Modem -->
 	<div class="form-row">
 		<label for="node-config-input-modem">Insteon Modem</label>
@@ -232,9 +234,9 @@
 								<th style='text-align: left;'>Active</th>
 								<th style='text-align: left;'>Device</th>
 								<th style='text-align: left;'>Type</th>
-								<th style='text-align: left;'>Group</th>
-								<th style='text-align: left;'>Level</th>
-								<th style='text-align: left;'>Rate</th>
+								<th style='text-align: left;'>Data1</th>
+								<th style='text-align: left;'>Data2</th>
+								<th style='text-align: left;'>Data3</th>
 								<th style='text-align: left;'>~</th>
 							</tr>
 						</thead>

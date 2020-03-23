@@ -111,73 +111,67 @@
 
 			// Sorting links by group
 			links = links.sort((a, b) => a.group > b.group ? 1 : b.group > a.group ? -1 : 0)
-									.sort((a, b) => a.type === b.type ? 0 : a.type < b.type ? 1 : -1);
+			             .sort((a, b) => a.type === b.type ? 0 : a.type < b.type ? 1 : -1);
 
 			// For each link in PLM render a device row
 			links.forEach(link => {
 				// Get the linked device's configuration node, if there is one
 				let deviceConfigNode = insteon.getDeviceNode(link.device);
 
-				/* Create the table cell for the device. If the device has a config node,
-					make it a clickable link to take the user to the edit panel for the
-					deviceConfig node.
-				*/
-				let deviceCell = $('<td>', { style:'white-space:nowrap' } );
+				// /* Create the table cell for the device. If the device has a config node,
+				// 	make it a clickable link to take the user to the edit panel for the
+				// 	deviceConfig node.
+				// */
+				// let deviceCell = $('<td>', { style:'white-space:nowrap' } );
 
-				if(deviceConfigNode === null){
-					deviceCell.text(`${insteon.addressToString(link.device)}`);
-				}
-				else{
-					$('<a>', {
-						href: '#',
-						html: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`,
-						click: function(e){
-							e.preventDefault();
-							RED.editor.editConfig('', 'insteon-device-config', deviceConfigNode.id);
-						}
-					}).appendTo(deviceCell);
-				}
+				// if(deviceConfigNode === null){
+				// 	deviceCell.text(`${insteon.addressToString(link.device)}`);
+				// }
+				// else{
+				// 	$('<a>', {
+				// 		href: '#',
+				// 		html: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`,
+				// 		click: function(e){
+				// 			e.preventDefault();
+				// 			RED.editor.editConfig('', 'insteon-device-config', deviceConfigNode.id);
+				// 		}
+				// 	}).appendTo(deviceCell);
+				// }
 
 				// Creating device row to hold device info
-				const row = insteon.renderDeviceRow(link, deviceCell);
+				const row = insteon.renderDeviceRow(link);
 
 				// Appending device row to links table
 				row.appendTo($('#links'));
 
-				// Option text will be device id or device name
-				let optionText = deviceConfigNode === null ? insteon.addressToString(link.device)
-																									: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`;
+				// // Option text will be device id or device name
+				// let optionText = deviceConfigNode === null ? insteon.addressToString(link.device)
+				// 																					: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`;
 
 				// Populate the select options in the remove device drop down with option text
-				$('<option/>', {
-					value: `${insteon.addressToString(link.device)}`,
-					html: optionText
-				}).appendTo($('#device_address_to_remove'));
+				// $('<option/>', {
+				// 	value: `${insteon.addressToString(link.device)}`,
+				// 	html: optionText
+				// }).appendTo($('#device_address_to_remove'));
 
 			});
 		},
 
-		renderDeviceRow: function(link, deviceCell){
+		renderDeviceRow: function(link){
+			// Getting function library
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
 			// Table row
 			let row = $('<tr/>');
 
-			// Record Type Column
-			$('<td>', { style:'white-space:nowrap' })
-				.text(link.type === 1 ? 'Controller' : 'Responder')
-				.appendTo(row);
+			const type = link.type === 1 ? 'Controller' : 'Responder';
+			const device = insteon.addressToString(link.device);
+			const scene = link.group;
+			const data1 = insteon.toHex(link.linkData[0]);
+			const data2 = insteon.toHex(link.linkData[1]);
+			const data3 = insteon.toHex(link.linkData[2]);
 
-			// Device Column
-			deviceCell.appendTo(row);
-
-			// Group Column
-			$('<td>', { style:'white-space:nowrap' })
-				.text(link.group)
-				.appendTo(row);
-
-			// Blank Column
-			$('<td>', { style:'white-space:nowrap' })
-				.text('')
-				.appendTo(row);
+			const columns = [type, device, scene, data1, data2, data3].map(_ => $('<td>', {text: _}).appendTo(row));
 
 			// Returning row
 			return row;
@@ -330,6 +324,12 @@
 <!-- Node Configuration -->
 <script type='text/html' data-template-name='insteon-modem-config'>
 
+	<style>
+		tr:nth-child(even) {
+			background-color: #eee;
+		}
+	</style>
+
 	<!-- Main Settings -->
 	<div class='form-row'>
 		<h2>Settings</h2>
@@ -377,6 +377,9 @@
 								<th style='text-align: left;'>Type</th>
 								<th style='text-align: left;'>Device</th>
 								<th style='text-align: left;'>Group</th>
+								<th style='text-align: left;'>Data 1</th>
+								<th style='text-align: left;'>Data 2</th>
+								<th style='text-align: left;'>Data 3</th>
 							</tr>
 						</thead>
 						<tbody id='links'></tbody>
