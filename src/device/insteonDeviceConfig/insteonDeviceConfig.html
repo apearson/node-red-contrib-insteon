@@ -30,9 +30,10 @@
 
 			// Setting up lookup button
 			$('#node-config-lookup-deviceType').click(_ => deviceConfig.onLookupDeviceType(node));
-			$('#node-config-sync-database').click(_ => deviceConfig.onSyncDatabase(node));
+			$('#node-config-sync-database').click(_ => deviceConfig.onSyncDatabase(node, true));
 
-			// deviceConfig.getDatabase(node.id, console.log, console.error);
+			// Inital Load of the database
+			deviceConfig.onSyncDatabase(node, false);
 		 },
 
 		//#endregion
@@ -93,8 +94,11 @@
 				// Appending device row to links table
 				recordRow.appendTo($('#node-config-database-body'));
 			}
+		},
 
-
+		clearDatabaseTable: function(){
+			// Clearing database table
+			$('#node-config-database-body').empty();
 		},
 
 		//#endregion
@@ -126,21 +130,28 @@
 			console.error(data);
 		},
 
-		onSyncDatabase: function(node){
+		onSyncDatabase: function(node, refresh){
 			let deviceConfig = RED.nodes.getType("insteon-device-config");
 
-			deviceConfig.getDatabase(node.id, deviceConfig.renderDatabaseTable, console.error);
+			// Clearing database table
+			deviceConfig.clearDatabaseTable();
+
+			deviceConfig.getDatabase(node.id, refresh, deviceConfig.renderDatabaseTable, console.error);
 		},
 
 		//#endregion
 
 		//#region Data Methods
 
-		getDatabase: function(id, success, error){
+		getDatabase: function(deviceId, refresh, success, error){
 			$.ajax({
 				method: 'GET',
-				dataType: "JSON",
-				url: 'insteon/device/database?deviceId=' + id,
+				dataType: 'JSON',
+				url: 'insteon/device/database',
+				data:{
+					deviceId,
+					refresh
+				},
 				success,
 				error
 			});
@@ -178,8 +189,8 @@
 
 	<!-- Device Type -->
 	<div class="form-row">
-		<label for="node-config-deviceType"><i class="icon-tag"></i>Device Type</label>
-		<select id="node-config-deviceType" style="width: inital">
+		<label for="node-config-input-deviceType"><i class="icon-tag"></i>Device Type</label>
+		<select id="node-config-input-deviceType" style="width: inital">
 			<optgroup label="General Devices">
 				<option value="InsteonDevice" selected="selected">Insteon Device</option>
 			</optgroup>

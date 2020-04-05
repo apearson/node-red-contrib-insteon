@@ -1,8 +1,10 @@
 /* Importing Libraries and types */
 import { Red, NodeProperties } from 'node-red';
-import PowerLincModem, { Byte, Packet, Utilities } from 'insteon-plm';
+import PowerLincModem, { Byte, Packet, Utilities, DeviceLinkRecord } from 'insteon-plm';
 import { InsteonModemConfigNode, InsteonDeviceConfigNode } from '../../typings/types';
 import { Request, Response } from 'express';
+import * as flatCache  from 'flat-cache';
+
 
 /* Interfaces */
 interface PLMConfigNodeProps extends NodeProperties {
@@ -11,11 +13,13 @@ interface PLMConfigNodeProps extends NodeProperties {
 
 /* Reconnect time settings */
 let reconnectTime = 15000;
+const cache = flatCache.load('insteon');
 
 /* Exporting Node Function */
 export = function(RED: Red){
 	// Settings
 	reconnectTime = RED.settings.serialReconnectTime ?? reconnectTime;
+
 
 	// Registering node type and a constructor
 	RED.nodes.registerType('insteon-modem-config', function(this: InsteonModemConfigNode, props: PLMConfigNodeProps){
@@ -267,11 +271,28 @@ async function getDeviceType(RED: Red, req: Request, res: Response){
 async function getDeviceDatabase(RED: Red, req: Request, res: Response){
 
 	const deviceId = req.query.deviceId;
+	const refresh = req.query.refresh === 'true';
 
 	try{
-		let PLMConfigNode = RED.nodes.getNode(deviceId) as InsteonDeviceConfigNode;
+		const DeviceConfigNode = RED.nodes.getNode(deviceId) as InsteonDeviceConfigNode;
 
-		const database = await PLMConfigNode?.device?.getDatabase();
+		const address = Utilities.toAddressString(DeviceConfigNode.address);
+		const cacheKey = `${address}:db`;
+
+		let database: DeviceLinkRecord[] | undefined;
+
+		// If we are not told to refresh and the cache includes the db
+		if(!refresh && cache.keys().includes(cacheKey)){
+			database = cache.getKey(cacheKey);
+		}
+		else{ // Else get database from device
+			database = await DeviceConfigNode?.device?.getDatabase();
+
+			if(database){
+				cache.setKey(cacheKey, database);
+				cache.save();
+			}
+		}
 
 		/* Send the links back to the client */
 		database ? res.json(database)
