@@ -15,14 +15,16 @@ interface PLMConfigNodeProps extends NodeProperties {
 let reconnectTime = 15000;
 const cache = flatCache.load('insteon');
 
+
 /* Exporting Node Function */
 export = function(RED: Red){
 	// Settings
 	reconnectTime = RED.settings.serialReconnectTime ?? reconnectTime;
 
-
 	// Registering node type and a constructor
 	RED.nodes.registerType('insteon-modem-config', function(this: InsteonModemConfigNode, props: PLMConfigNodeProps){
+
+		console.log(RED.settings.userDir);
 
 		/* Creating actual node */
 		RED.nodes.createNode(this, props);
@@ -279,29 +281,64 @@ async function getDeviceDatabase(RED: Red, req: Request, res: Response){
 		const address = Utilities.toAddressString(DeviceConfigNode.address);
 		const cacheKey = `${address}:db`;
 
-		let database: DeviceLinkRecord[] | undefined;
+		let database: DeviceLinkRecord[] | null;
 
 		// If we are not told to refresh and the cache includes the db
-		if(!refresh && cache.keys().includes(cacheKey)){
-			database = cache.getKey(cacheKey);
+		if(!refresh){
+			database = cache.keys().includes(cacheKey) ? cache.getKey(cacheKey) : [];
 		}
 		else{ // Else get database from device
-			database = await DeviceConfigNode?.device?.getDatabase();
+			database = await DeviceConfigNode?.device?.getDatabase() ?? null;
 
 			if(database){
 				cache.setKey(cacheKey, database);
-				cache.save();
+				cache.save(true);
 			}
 		}
 
 		/* Send the links back to the client */
 		database ? res.json(database)
-		         : res.status(500).send({message: 'An error has occured while getting device info'});
+		         : res.status(500).send({message: 'An error has occured while getting device database'});
 	}
 	catch(e){
 		res.status(500).send({message: 'An error has occured', error: e});
 	}
 
+}
+
+async function getDeviceConfiguration(RED: Red, req: Request, res: Response){
+
+	const deviceId = req.query.deviceId;
+	const refresh = req.query.refresh === 'true';
+
+	try{
+		const DeviceConfigNode = RED.nodes.getNode(deviceId) as InsteonDeviceConfigNode;
+
+		const address = Utilities.toAddressString(DeviceConfigNode.address);
+		const cacheKey = `${address}:config`;
+
+		let config = {};
+
+		// If we are not told to refresh and the cache includes the db
+		if(!refresh){
+			config = cache.keys().includes(cacheKey) ? cache.getKey(cacheKey) : {};
+		}
+		else{ // Else get database from device
+			// database = await DeviceConfigNode?.device?.getDeviceConfiguration() ?? null;
+
+			// if(database){
+			// 	cache.setKey(cacheKey, database);
+			// 	cache.save(true);
+			// }
+		}
+
+		/* Send the links back to the client */
+		config ? res.json(config)
+		         : res.status(500).send({message: 'An error has occured while getting device config'});
+	}
+	catch(e){
+		res.status(500).send({message: 'An error has occured', error: e});
+	}
 }
 
 //#endregion

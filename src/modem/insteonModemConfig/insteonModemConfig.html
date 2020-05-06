@@ -205,6 +205,11 @@
 
 			// Adding tabs
 			tabs.addTab({
+				id: "node-config-tab-config",
+				label: "Info/Config"
+			});
+
+			tabs.addTab({
 				id: "node-config-tab-database",
 				label: "Database"
 			});
@@ -212,6 +217,11 @@
 			tabs.addTab({
 				id: "node-config-tab-scenes",
 				label: "Scenes"
+			});
+
+			tabs.addTab({
+				id: "node-config-tab-controllers",
+				label: "Controllers"
 			});
 
 		},
@@ -234,7 +244,10 @@
 			$.ajax({
 				method: 'GET',
 				dataType: "JSON",
-				url: 'insteon/modem/info?path=' + path,
+				url: 'insteon/modem/info',
+				data: {
+					path
+				},
 				success,
 				error
 			});
@@ -244,7 +257,10 @@
 			$.ajax({
 				method: 'GET',
 				dataType: "JSON",
-				url: 'insteon/modem/links?id=' + id,
+				url: 'insteon/modem/links',
+				data: {
+					id
+				},
 				success,
 				error
 			});
@@ -312,7 +328,7 @@
 			) || null;
 		 },
 
-		 toHex: function(n){
+		toHex: function(n){
 			return `0x${n.toString(16).toUpperCase().padStart(2, '0')}`;
 		}
 
@@ -347,17 +363,6 @@
 		</a>
 	</div>
 
-	<!-- Info -->
-	<div class='form-row'>
-		<h2>Info</h2>
-		<div>
-			Address: <span id="insteon-address"></span>
-		</div>
-		<div>
-			Type: <span id="insteon-desc"></span>
-		</div>
-	</div>
-
 	<!-- Tab Strip -->
 	<div class="form-row">
 		<ul style="margin-bottom: 20px;" id="node-config-tabs" />
@@ -365,6 +370,28 @@
 
 	<!-- Tab Content -->
 	<div id="node-config-tabs-content" style="min-height:150px;">
+
+		<!-- Scenes Tab -->
+		<div id="node-config-tab-config" style="display:none">
+			<div class="form-row">
+				<div>
+					<h2>Info</h2>
+					<div>
+						Address: <span id="insteon-address"></span>
+					</div>
+					<div>
+						Type: <span id="insteon-desc"></span>
+					</div>
+				</div>
+				<div>
+					<h2>Config</h2>
+					<div>
+						Deadman: <span id="insteon-deadman"></span>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Database Tab -->
 		<div id="node-config-tab-database" style="display:none">
 			<div class="form-row">
@@ -393,6 +420,13 @@
 		<div id="node-config-tab-scenes" style="display:none">
 			<div class="form-row">
 				This is the scenes tab
+			</div>
+		</div>
+
+		<!-- Scenes Tab -->
+		<div id="node-config-tab-controllers" style="display:none">
+			<div class="form-row">
+				This is the controllers tab
 			</div>
 		</div>
 	</div>

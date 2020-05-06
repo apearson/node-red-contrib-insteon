@@ -27,10 +27,12 @@
 
 			// Rendering settings
 			deviceConfig.renderTabs();
+			deviceConfig.renderConfigurationTab(node);
 
 			// Setting up lookup button
 			$('#node-config-lookup-deviceType').click(_ => deviceConfig.onLookupDeviceType(node));
 			$('#node-config-sync-database').click(_ => deviceConfig.onSyncDatabase(node, true));
+			$('#node-config-sync-scene').click(_ => deviceConfig.onSyncDatabase(node, true));
 
 			// Inital Load of the database
 			deviceConfig.onSyncDatabase(node, false);
@@ -52,6 +54,11 @@
 			});
 
 			// Adding tabs
+			tabs.addTab({
+				id: "node-config-tab-configuration",
+				label: "Config"
+			});
+
 			tabs.addTab({
 				id: "node-config-tab-database",
 				label: "Database"
@@ -80,16 +87,25 @@
 				let rate = link.rampRate.toString();
 				let highWater = link.Type.highWater ? '~' : '-';
 
+				// Creating row
 				let recordRow = $('<tr>', { style:'white-space:nowrap' } );
 
-				$('<td>', {html: address}).appendTo(recordRow);
-				$('<td>', {html: active}).appendTo(recordRow);
-				$('<td>', {html: device}).appendTo(recordRow);
-				$('<td>', {html: type}).appendTo(recordRow);
-				$('<td>', {html: group}).appendTo(recordRow);
-				$('<td>', {html: level}).appendTo(recordRow);
-				$('<td>', {html: rate}).appendTo(recordRow);
-				$('<td>', {html: highWater}).appendTo(recordRow);
+				// Event handlers
+				const onActiveChange = _ => deviceConfig.onActiveChange(link.address, !link.Type.active);
+				const onHighWaterChange = _ => deviceConfig.onHighWaterChange(link.address, !link.Type.highWater);
+
+				// Styles
+				const clickableStyle = 'cursor: pointer';
+
+				// Creating columns
+				$('<td>', {text: address }).appendTo(recordRow);
+				$('<td>', {text: active, click: onActiveChange, style: clickableStyle}).appendTo(recordRow);
+				$('<td>', {text: device}).appendTo(recordRow);
+				$('<td>', {text: type}).appendTo(recordRow);
+				$('<td>', {text: group}).appendTo(recordRow);
+				$('<td>', {text: level}).appendTo(recordRow);
+				$('<td>', {text: rate}).appendTo(recordRow);
+				$('<td>', {text: highWater, click: onHighWaterChange, style: clickableStyle}).appendTo(recordRow);
 
 				// Appending device row to links table
 				recordRow.appendTo($('#node-config-database-body'));
@@ -97,8 +113,54 @@
 		},
 
 		clearDatabaseTable: function(){
-			// Clearing database table
 			$('#node-config-database-body').empty();
+		},
+
+		renderSceneTable: function(records){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+			let deviceConfig = RED.nodes.getType("insteon-device-config");
+
+			const scenes = {};
+
+			const controllerRecords = records.filter(_ => _.Type.control === 1).forEach(link => {
+
+				const sceneArray = scenes[link.group] || [];
+
+				sceneArray.push(link);
+
+				scenes[link.group] = sceneArray;
+
+			});
+			scenes.responders = records.filter(_ => _.Type.control !== 1);
+
+			// Looping over links
+			for (let scene of Object.keys(scenes)){
+				const group = deviceConfig.renderSceneGroup(scene, scenes[scene]);
+
+				$('#node-config-scene-body').append(group);
+			}
+		},
+
+		clearSceneTable: function(){
+			$('#node-config-scene-body').empty();
+		},
+
+		renderSceneGroup: function(number, records){
+
+			let recordRow = $('<div>');
+
+			recordRow.append(`Scene ${number}`);
+
+			recordRow.append($('<br>'));
+
+			return recordRow;
+		},
+
+		renderConfigurationTab: function(node){
+			const tabBody = $('#node-config-configuration-body');
+
+			// Getting function library
+			tabBody.append(`Hello World from ${node.name}`);
 		},
 
 		//#endregion
@@ -135,8 +197,24 @@
 
 			// Clearing database table
 			deviceConfig.clearDatabaseTable();
+			deviceConfig.clearSceneTable();
 
-			deviceConfig.getDatabase(node.id, refresh, deviceConfig.renderDatabaseTable, console.error);
+			deviceConfig.getDatabase(node.id, refresh, deviceConfig.onDatabase, console.error);
+		},
+
+		onDatabase: function(records){
+			let deviceConfig = RED.nodes.getType("insteon-device-config");
+
+			deviceConfig.renderDatabaseTable(records);
+			deviceConfig.renderSceneTable(records);
+		},
+
+		onActiveChange: function(address, state){
+			console.log(`Changing active ${address} to ${state}`);
+		},
+
+		onHighWaterChange: function(address, state){
+			console.log(`Changing highwater: ${address} to ${state}`);
 		},
 
 		//#endregion
@@ -164,11 +242,13 @@
 
 <!-- Node Configuration -->
 <script type="text/html" data-template-name="insteon-device-config">
+	<!-- Styles -->
 	<style>
 		tr:nth-child(even) {
 			background-color: #eee;
 		}
 	</style>
+
 	<!-- Modem -->
 	<div class="form-row">
 		<label for="node-config-input-modem">Insteon Modem</label>
@@ -230,6 +310,19 @@
 
 	<!-- Tab Content -->
 	<div id="node-config-tabs-content" style="min-height:150px;">
+		<!-- Configuration Tab -->
+		<div id="node-config-tab-configuration" style="display:none">
+			<div class="form-row">
+				<!-- Configuration Content -->
+				<div>
+					<a id='node-config-sync-configuration' class='red-ui-button' style="width: 100%">
+						<i id='node-config-sync-configuration-icon' class='fa fa-refresh'/> Sync Config
+					</a>
+					<div id='node-config-configuration-body'></div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Database Tab -->
 		<div id="node-config-tab-database" style="display:none">
 			<div class="form-row">
@@ -260,9 +353,16 @@
 		<!-- Scenes Tab -->
 		<div id="node-config-tab-scenes" style="display:none">
 			<div class="form-row">
-				This is the scenes tab
+				<!-- Scene Content -->
+				<div>
+					<a id='node-config-sync-scene' class='red-ui-button' style="width: 100%">
+						<i id='node-config-sync-scene-icon' class='fa fa-refresh'/> Sync Scenes
+					</a>
+					<div id='node-config-scene-body'></div>
+				</div>
 			</div>
 		</div>
+	</div>
 </script>
 
 <!-- Help Panel -->
