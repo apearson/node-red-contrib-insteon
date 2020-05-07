@@ -28,11 +28,17 @@
 
 			// PLM Info
 			if(node.path != '')
-				insteon.getModemInfo(node.path, insteon.renderModemInfo, e => node.error(e));
+				insteon.syncModemInfoConfig(node);
 
 			// Setting up lookup button
 			$('#node-config-lookup-modems').click(insteon.onLookupPaths);
 			$('#node-config-info-modems').click(insteon.onGetInfo);
+
+			// Setting up sync button
+			$('#node-config-sync-configuration').click(_ => insteon.syncModemInfoConfig(node));
+			$('#node-config-sync-database').click(_ => insteon.syncModemLinks());
+			$('#node-config-sync-scenes').click(_ => insteon.syncModemLinks());
+			$('#node-config-sync-controllers').click(_ => insteon.syncModemLinks(node));
 
 			// PLM links table
 			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => node.error(e));
@@ -42,12 +48,11 @@
 
 		//#region Handlers
 
-		onGetInfo: function(){
+		syncModemInfoConfig: function(node){
 			let insteon = RED.nodes.getType("insteon-modem-config");
 
-			let path = $('#node-config-input-path').val();
-
-			insteon.getModemInfo(path, insteon.renderModemInfo, _ => insteon.renderModemInfo());
+			insteon.syncModemInfo();
+			insteon.syncModemConfig(node);
 		},
 
 		onLookupPaths: function(){
@@ -56,12 +61,24 @@
 			insteon.getInsteonPorts(insteon.renderInsteonPorts, e => sendErrorToDebugConsole(node.id, e));
 		},
 
-		onAddDevice: function(){
-			submitAddress(this, 'addNewDevice', $('#new_device_address').val());
+		syncModemInfo: function(){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			let path = $('#node-config-input-path').val();
+
+			insteon.getModemInfo(path, insteon.renderModemInfo, _ => insteon.renderModemInfo());
 		},
 
-		onRemoveDevice: function(){
-			submitAddress(this, 'removeDevice', $('#device_address_to_remove').val());
+		syncModemConfig: function(node){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			insteon.getModemConfig(node.id, insteon.renderModemConfig, _ => insteon.renderModemConfig());
+		},
+
+		syncModemLinks: function(node){
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => node.error(e));
 		},
 
 		//#endregion
@@ -193,6 +210,28 @@
 			$('#insteon-desc').text(descString);
 		},
 
+		renderModemConfig: function(data){
+			// Getting function library
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			let autoLedString = '';
+			let autoLinkingString = '';
+			let deadmanString = '';
+			let monitorModeString = '';
+
+			if(data != undefined){
+				autoLedString = data.autoLED;
+				autoLinkingString = data.autoLinking;
+				deadmanString = data.deadman;
+				monitorModeString = data.monitorMode;
+			}
+
+			$('#insteon-autoLed').text(autoLedString);
+			$('#insteon-autoLinking').text(autoLinkingString);
+			$('#insteon-deadman').text(deadmanString);
+			$('#insteon-monitorMode').text(monitorModeString);
+		},
+
 		renderTabs: function(){
 			// Creating tabs with on change function
 			let tabs = RED.tabs.create({
@@ -247,6 +286,19 @@
 				url: 'insteon/modem/info',
 				data: {
 					path
+				},
+				success,
+				error
+			});
+		},
+
+		getModemConfig: function(id, success, error){
+			$.ajax({
+				method: 'GET',
+				dataType: "JSON",
+				url: 'insteon/modem/config',
+				data: {
+					id
 				},
 				success,
 				error
@@ -374,6 +426,9 @@
 		<!-- Scenes Tab -->
 		<div id="node-config-tab-config" style="display:none">
 			<div class="form-row">
+				<a id='node-config-sync-configuration' class='red-ui-button' style="width: 100%">
+					<i class='fa fa-refresh'/> Sync Configuration
+				</a>
 				<div>
 					<h2>Info</h2>
 					<div>
@@ -386,7 +441,16 @@
 				<div>
 					<h2>Config</h2>
 					<div>
+						Auto LED: <span id="insteon-autoLed"></span>
+					</div>
+					<div>
+						Auto Linking: <span id="insteon-autoLinking"></span>
+					</div>
+					<div>
 						Deadman: <span id="insteon-deadman"></span>
+					</div>
+					<div>
+						Monitor Mode: <span id="insteon-monitorMode"></span>
 					</div>
 				</div>
 			</div>
@@ -397,6 +461,9 @@
 			<div class="form-row">
 				<!-- Database Content -->
 				<div>
+					<a id='node-config-sync-database' class='red-ui-button' style="width: 100%">
+						<i class='fa fa-refresh'/> Sync Database
+					</a>
 					<p id='linkMessage'>Links can only be displayed after the PLM is connected.</p>
 					<table width='100%'>
 						<thead>
@@ -419,6 +486,9 @@
 		<!-- Scenes Tab -->
 		<div id="node-config-tab-scenes" style="display:none">
 			<div class="form-row">
+				<a id='node-config-sync-scenes' class='red-ui-button' style="width: 100%">
+					<i class='fa fa-refresh'/> Sync Scenes
+				</a>
 				This is the scenes tab
 			</div>
 		</div>
@@ -426,6 +496,9 @@
 		<!-- Scenes Tab -->
 		<div id="node-config-tab-controllers" style="display:none">
 			<div class="form-row">
+				<a id='node-config-sync-controllers' class='red-ui-button' style="width: 100%">
+					<i class='fa fa-refresh'/> Sync Controllers
+				</a>
 				This is the controllers tab
 			</div>
 		</div>

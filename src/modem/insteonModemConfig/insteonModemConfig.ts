@@ -52,6 +52,12 @@ export = function(RED: Red){
 	);
 
 	RED.httpAdmin.get(
+		'/insteon/modem/config',
+		RED.auth.needsPermission('serial.read'),
+		(req: any, res: any) => getInsteonConfig(RED, req, res)
+	);
+
+	RED.httpAdmin.get(
 		"/insteon/modem/links",
 		RED.auth.needsPermission('serial.read'),
 		(req: any, res: any) => getInsteonLinks(RED, req, res)
@@ -157,7 +163,6 @@ async function getInsteonPorts(req: Request, res: Response){
 }
 
 async function getInsteonLinks(RED: Red, req: Request, res: Response){
-
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
 		let PLMConfigNode = RED.nodes.getNode(req.query.id) as InsteonModemConfigNode;
@@ -245,6 +250,24 @@ async function getInsteonInfo(RED: Red, req: Request, res: Response){
 	}
 	catch(e){
 		console.error(e);
+		res.status(500).send({message: 'An error has occured', error: e});
+	}
+}
+
+async function getInsteonConfig(RED: Red, req: Request, res: Response){
+	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
+	try{
+		let PLMConfigNode = RED.nodes.getNode(req.query.id) as InsteonModemConfigNode;
+
+		const config = PLMConfigNode?.plm?.config;
+
+		if(config == undefined)
+			throw Error('Could not get config from plm.  PLM is not ready');
+
+		/* Send the config back to the client */
+		res.json(config);
+	}
+	catch(e){
 		res.status(500).send({message: 'An error has occured', error: e});
 	}
 }

@@ -12,7 +12,7 @@
 		"build:ts": "tsc",
 		"build:debug": "tsc -d --watch",
 		"copyFiles": "copyfiles -u 1 src/**/*.html dist/",
-		"debug": "ts-node ./test/debug",
+		"debug": "yarn run build && ../testing/node_modules/.bin/node-red -u ../testing/usrDir/",
 		"watch": "nodemon -w src -e ts,html,js,json --exec yarn run build",
 		"watch:files": "watch 'yarn run copyFiles' src"
 	},
