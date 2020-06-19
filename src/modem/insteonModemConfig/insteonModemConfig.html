@@ -232,6 +232,51 @@
 			$('#insteon-monitorMode').text(monitorModeString);
 		},
 
+		renderScenes: function(records){
+			// Getting function library
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			// Clearing for update
+			$("#node-config-tab-scenes-body").empty();
+
+			//
+			const scenes = {};
+
+			const controllerRecords = records.filter(_ => _.Type.control === 1).forEach(link => {
+
+				const sceneArray = scenes[link.group] || [];
+
+				sceneArray.push(link);
+
+				scenes[link.group] = sceneArray;
+
+			});
+			scenes.responders = records.filter(_ => _.Type.control !== 1);
+
+			// Looping over links
+			for (let scene of Object.keys(scenes)){
+				const group = insteon.renderSceneGroup(scene, scenes[scene]);
+
+				$("#node-config-tab-scenes-body").append(group);
+			}
+
+		},
+
+		renderSceneGroup: function(number, records){
+
+			let recordRow = $('<div>');
+
+			recordRow.append(`Scene ${number}`);
+
+			recordRow.append($('<br>'));
+
+			return recordRow;
+		},
+
+		renderSceneBox: function(number){
+
+		},
+
 		renderTabs: function(){
 			// Creating tabs with on change function
 			let tabs = RED.tabs.create({
@@ -245,7 +290,7 @@
 			// Adding tabs
 			tabs.addTab({
 				id: "node-config-tab-config",
-				label: "Info/Config"
+				label: "Info/Config",
 			});
 
 			tabs.addTab({
@@ -255,7 +300,8 @@
 
 			tabs.addTab({
 				id: "node-config-tab-scenes",
-				label: "Scenes"
+				label: "Scenes",
+				onSelect: () => alert('Hello')
 			});
 
 			tabs.addTab({
@@ -453,6 +499,9 @@
 						Monitor Mode: <span id="insteon-monitorMode"></span>
 					</div>
 				</div>
+				<a id='node-config-save-configuration' class='red-ui-button' style="width: 100%; margin-top: 5px">
+					<i class='fa fa-save'/> Save Configuration
+				</a>
 			</div>
 		</div>
 
@@ -489,8 +538,8 @@
 				<a id='node-config-sync-scenes' class='red-ui-button' style="width: 100%">
 					<i class='fa fa-refresh'/> Sync Scenes
 				</a>
-				This is the scenes tab
 			</div>
+			<div id="node-config-tab-scenes-body" class="form-row" >This is the scenes tab</div>
 		</div>
 
 		<!-- Scenes Tab -->
@@ -499,8 +548,8 @@
 				<a id='node-config-sync-controllers' class='red-ui-button' style="width: 100%">
 					<i class='fa fa-refresh'/> Sync Controllers
 				</a>
-				This is the controllers tab
 			</div>
+			<div id="node-config-tab-controllers-body" class="form-row" >This is the controllers tab</div>
 		</div>
 	</div>
 </script>
