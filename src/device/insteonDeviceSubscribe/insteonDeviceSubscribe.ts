@@ -55,16 +55,16 @@ function onReady(node: DeviceSubscribeNode, text: string){
 	node.send({ topic: 'ready', payload: text });
 
 	// Adding event listeners
-	node.deviceConfigNode?.device?.on(['packet', '**'], function (this: any, p){ onPacket(node, this.event, p) });
+	node.deviceConfigNode?.device?.on(['packet', '**'], function (this: any, p){ onPacket(node, eventToArray(this.event), p) });
 
 	// Device events
-	node.deviceConfigNode?.device?.on(['switch', '**'], function (this: any, p){ onSwitch(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['dim', '**' ], function (this: any, p){ onDim(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['sensor', '**' ], function (this: any, p){ onSensor(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['heartbeat', '**' ], function (this: any, p){ onHeartbeat(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['battery', '**' ], function (this: any, p){ onBattery(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['motion', '**' ], function (this: any, p){ onMotion(node, this.event, p) });
-	node.deviceConfigNode?.device?.on(['light', '**' ], function (this: any, p){ onLight(node, this.event, p) });
+	node.deviceConfigNode?.device?.on(['switch', '**'], function (this: any, p){ console.log(this), onSwitch(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['dim', '**' ], function (this: any, p){ onDim(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['sensor', '**' ], function (this: any, p){ onSensor(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['heartbeat', '**' ], function (this: any, p){ onHeartbeat(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['battery', '**' ], function (this: any, p){ onBattery(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['motion', '**' ], function (this: any, p){ onMotion(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['light', '**' ], function (this: any, p){ onLight(node, eventToArray(this.event), p) });
 }
 
 function onPacket(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
@@ -147,6 +147,14 @@ function onLight(node: DeviceSubscribeNode, event: string[], packet: Packet.Pack
 		event,
 		packet,
 	})
+}
+
+//#endregion
+
+//#region Helper Functions
+
+function eventToArray(e: string | string[]){
+	return Array.isArray(e) ? e : e.split('::');
 }
 
 //#endregion

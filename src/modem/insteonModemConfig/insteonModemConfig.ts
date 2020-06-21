@@ -165,7 +165,7 @@ async function getInsteonPorts(req: Request, res: Response){
 async function getInsteonLinks(RED: Red, req: Request, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
-		let PLMConfigNode = RED.nodes.getNode(req.query.id) as InsteonModemConfigNode;
+		let PLMConfigNode = RED.nodes.getNode(req.query.id?.toString() ?? '') as InsteonModemConfigNode;
 
 		/* Send the links back to the client */
 		res.json(PLMConfigNode?.plm?.links ?? []);
@@ -178,10 +178,10 @@ async function getInsteonLinks(RED: Red, req: Request, res: Response){
 async function manageDevice(RED: Red, req: Request, res: Response){
 
 	try{
-		let PLMConfigNode = RED.nodes.getNode(req.query.id) as InsteonModemConfigNode;
+		let PLMConfigNode = RED.nodes.getNode(req.query.id?.toString() ?? '') as InsteonModemConfigNode;
 
 		/* Validate the device address */
-		let address = Utilities.toAddressArray(req.query.address) as Byte[];
+		let address = Utilities.toAddressArray(req.query.address?.toString() ?? '') as Byte[];
 		if(address.length !== 3){
 			// Server side failure
 			res.status(400);
@@ -228,7 +228,7 @@ async function getInsteonInfo(RED: Red, req: Request, res: Response){
 	try{
 		let path = req.query.path;
 
-		const plm = new PowerLincModem(path, {syncConfig: false, syncLinks: false});
+		const plm = new PowerLincModem(path?.toString() ?? '', {syncConfig: false, syncLinks: false});
 
 		plm.on('ready', () => {
 
@@ -257,7 +257,7 @@ async function getInsteonInfo(RED: Red, req: Request, res: Response){
 async function getInsteonConfig(RED: Red, req: Request, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
-		let PLMConfigNode = RED.nodes.getNode(req.query.id) as InsteonModemConfigNode;
+		let PLMConfigNode = RED.nodes.getNode(req.query.id?.toString() ?? '') as InsteonModemConfigNode;
 
 		const config = PLMConfigNode?.plm?.config;
 
@@ -274,11 +274,11 @@ async function getInsteonConfig(RED: Red, req: Request, res: Response){
 
 async function getDeviceType(RED: Red, req: Request, res: Response){
 
-	const address = req.query.address.split('.').map((_: string) => parseInt(_, 16));
+	const address = (req.query.address?.toString() ?? '').split('.').map((_: string) => parseInt(_, 16)) as Byte[];
 	const modemId = req.query.modemId;
 
 	try{
-		let PLMConfigNode = RED.nodes.getNode(modemId) as InsteonModemConfigNode;
+		let PLMConfigNode = RED.nodes.getNode(modemId?.toString() ?? '') as InsteonModemConfigNode;
 
 		const info = await PLMConfigNode?.plm?.queryFullDeviceInfo(address);
 
@@ -299,7 +299,7 @@ async function getDeviceDatabase(RED: Red, req: Request, res: Response){
 	const refresh = req.query.refresh === 'true';
 
 	try{
-		const DeviceConfigNode = RED.nodes.getNode(deviceId) as InsteonDeviceConfigNode;
+		const DeviceConfigNode = RED.nodes.getNode(deviceId?.toString() ?? '') as InsteonDeviceConfigNode;
 
 		const address = Utilities.toAddressString(DeviceConfigNode.address);
 		const cacheKey = `${address}:db`;
@@ -335,7 +335,7 @@ async function getDeviceConfiguration(RED: Red, req: Request, res: Response){
 	const refresh = req.query.refresh === 'true';
 
 	try{
-		const DeviceConfigNode = RED.nodes.getNode(deviceId) as InsteonDeviceConfigNode;
+		const DeviceConfigNode = RED.nodes.getNode(deviceId?.toString() ?? '') as InsteonDeviceConfigNode;
 
 		const address = Utilities.toAddressString(DeviceConfigNode.address);
 		const cacheKey = `${address}:config`;
