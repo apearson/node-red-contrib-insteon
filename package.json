@@ -44,6 +44,6 @@
 		"@types/express": "^4.17.3",
 		"@types/flat-cache": "^2.0.0",
 		"flat-cache": "^2.0.1",
-		"insteon-plm": "^0.5.0"
+		"insteon-plm": "^0.6.0"
 	}
 }
