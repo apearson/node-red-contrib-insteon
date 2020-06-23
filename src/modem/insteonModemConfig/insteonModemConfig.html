@@ -27,33 +27,28 @@
 			insteon.renderTabs();
 
 			// PLM Info
-			if(node.path != '')
-				insteon.syncModemInfoConfig(node);
+			if(node.path != ''){
+				insteon.onSyncInfo();
+				insteon.onSyncConfig(node, false);
+			}
 
 			// Setting up lookup button
 			$('#node-config-lookup-modems').click(insteon.onLookupPaths);
-			$('#node-config-info-modems').click(insteon.onGetInfo);
+			$('#node-config-info-modems').click(insteon.onSyncInfo);
 
 			// Setting up sync button
-			$('#node-config-sync-configuration').click(_ => insteon.syncModemInfoConfig(node));
-			$('#node-config-sync-database').click(_ => insteon.syncModemLinks());
-			$('#node-config-sync-scenes').click(_ => insteon.syncModemLinks());
-			$('#node-config-sync-controllers').click(_ => insteon.syncModemLinks(node));
+			$('#node-config-sync-configuration').click(_ => insteon.onSyncConfig(node, true));
+			$('#node-config-sync-database').click(_ => insteon.onSyncDatabase(node, true));
+			$('#node-config-sync-scenes').click(_ => insteon.onSyncDatabase(node, true));
+			$('#node-config-sync-controllers').click(_ => insteon.onSyncDatabase(node, true));
 
 			// PLM links table
-			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => node.error(e));
-		 },
+			insteon.onSyncDatabase(node, false);
+		},
 
-		 //#endregion
+		//#endregion
 
 		//#region Handlers
-
-		syncModemInfoConfig: function(node){
-			let insteon = RED.nodes.getType("insteon-modem-config");
-
-			insteon.syncModemInfo();
-			insteon.syncModemConfig(node);
-		},
 
 		onLookupPaths: function(){
 			let insteon = RED.nodes.getType("insteon-modem-config");
@@ -61,24 +56,54 @@
 			insteon.getInsteonPorts(insteon.renderInsteonPorts, e => sendErrorToDebugConsole(node.id, e));
 		},
 
-		syncModemInfo: function(){
+		onSyncInfo: function(node){
+			// Getting function library
 			let insteon = RED.nodes.getType("insteon-modem-config");
 
-			let path = $('#node-config-input-path').val();
+			// Clearing user fields
+			insteon.renderModemInfo()
 
+			let path = $('#node-config-input-path').val();
 			insteon.getModemInfo(path, insteon.renderModemInfo, _ => insteon.renderModemInfo());
 		},
 
-		syncModemConfig: function(node){
+		onSyncConfig: function(node, refresh){
+			// Getting function library
 			let insteon = RED.nodes.getType("insteon-modem-config");
 
-			insteon.getModemConfig(node.id, insteon.renderModemConfig, _ => insteon.renderModemConfig());
+			// Adding update for user
+			insteon.renderModemConfig({autoLED: 'Syncing...', autoLinking: 'Syncing...', deadman: 'Syncing...', monitorMode: 'Syncing...'});
+
+			// Syncing config
+			insteon.getModemConfig(node.id, refresh, insteon.renderModemConfig, e => node.error(e));
 		},
 
-		syncModemLinks: function(node){
+		onSyncDatabase: function(node, refresh){
+			// Getting function library
 			let insteon = RED.nodes.getType("insteon-modem-config");
 
-			insteon.getModemLinks(node.id, insteon.renderLinksTable, e => node.error(e));
+			// Clearing table
+			insteon.clearDatabaseTable();
+
+			// Adding update for user
+			$('#links').append('Syncing Links...');
+			$("#node-config-tab-scenes-body").text('Syncing Links...');
+			$("#node-config-tab-controllers-body").text('Syncing Links...');
+
+			// Syncing Links
+			insteon.getModemLinks(node.id, refresh, insteon.onDatabase, e => node.error(e));
+		},
+
+		onDatabase: function(links){
+			// Getting function library
+			let insteon = RED.nodes.getType("insteon-modem-config");
+
+			insteon.renderLinksTable(links);
+
+			const scenes = insteon.linksToTypes(links);
+
+			insteon.renderScenesTab(scenes.scenes);
+			insteon.renderControllersTab(scenes.responders);
 		},
 
 		//#endregion
@@ -96,7 +121,7 @@
 				close: () => {
 					$('#node-config-input-path').autocomplete('destroy');
 
-					insteon.onGetInfo();
+					insteon.onSyncInfo();
 				}
 			};
 
@@ -124,7 +149,6 @@
 
 			// Clearing links and address elements
 			$('#links').empty();
-			$('#device_address_to_remove').empty();
 
 			// Sorting links by group
 			links = links.sort((a, b) => a.group > b.group ? 1 : b.group > a.group ? -1 : 0)
@@ -135,42 +159,11 @@
 				// Get the linked device's configuration node, if there is one
 				let deviceConfigNode = insteon.getDeviceNode(link.device);
 
-				// /* Create the table cell for the device. If the device has a config node,
-				// 	make it a clickable link to take the user to the edit panel for the
-				// 	deviceConfig node.
-				// */
-				// let deviceCell = $('<td>', { style:'white-space:nowrap' } );
-
-				// if(deviceConfigNode === null){
-				// 	deviceCell.text(`${insteon.addressToString(link.device)}`);
-				// }
-				// else{
-				// 	$('<a>', {
-				// 		href: '#',
-				// 		html: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`,
-				// 		click: function(e){
-				// 			e.preventDefault();
-				// 			RED.editor.editConfig('', 'insteon-device-config', deviceConfigNode.id);
-				// 		}
-				// 	}).appendTo(deviceCell);
-				// }
-
 				// Creating device row to hold device info
 				const row = insteon.renderDeviceRow(link);
 
 				// Appending device row to links table
 				row.appendTo($('#links'));
-
-				// // Option text will be device id or device name
-				// let optionText = deviceConfigNode === null ? insteon.addressToString(link.device)
-				// 																					: `${insteon.addressToString(link.device)}: ${deviceConfigNode.name}`;
-
-				// Populate the select options in the remove device drop down with option text
-				// $('<option/>', {
-				// 	value: `${insteon.addressToString(link.device)}`,
-				// 	html: optionText
-				// }).appendTo($('#device_address_to_remove'));
-
 			});
 		},
 
@@ -232,26 +225,12 @@
 			$('#insteon-monitorMode').text(monitorModeString);
 		},
 
-		renderScenes: function(records){
+		renderScenesTab: function(scenes){
 			// Getting function library
 			let insteon = RED.nodes.getType("insteon-modem-config");
 
 			// Clearing for update
 			$("#node-config-tab-scenes-body").empty();
-
-			//
-			const scenes = {};
-
-			const controllerRecords = records.filter(_ => _.Type.control === 1).forEach(link => {
-
-				const sceneArray = scenes[link.group] || [];
-
-				sceneArray.push(link);
-
-				scenes[link.group] = sceneArray;
-
-			});
-			scenes.responders = records.filter(_ => _.Type.control !== 1);
 
 			// Looping over links
 			for (let scene of Object.keys(scenes)){
@@ -301,14 +280,23 @@
 			tabs.addTab({
 				id: "node-config-tab-scenes",
 				label: "Scenes",
-				onSelect: () => alert('Hello')
 			});
 
 			tabs.addTab({
 				id: "node-config-tab-controllers",
-				label: "Controllers"
+				label: "Controllers",
+
 			});
 
+		},
+
+		renderControllersTab: function(records){
+
+			$("#node-config-tab-controllers-body").text(JSON.stringify(records));
+		},
+
+		clearDatabaseTable: function(){
+			$('#links').empty();
 		},
 
 		//#endregion
@@ -338,26 +326,28 @@
 			});
 		},
 
-		getModemConfig: function(id, success, error){
+		getModemConfig: function(id, refresh, success, error){
 			$.ajax({
 				method: 'GET',
 				dataType: "JSON",
 				url: 'insteon/modem/config',
 				data: {
-					id
+					id,
+					refresh
 				},
 				success,
 				error
 			});
 		},
 
-	 	getModemLinks: function(id, success, error){
+	 	getModemLinks: function(id, refresh, success, error){
 			$.ajax({
 				method: 'GET',
 				dataType: "JSON",
 				url: 'insteon/modem/links',
 				data: {
-					id
+					id,
+					refresh
 				},
 				success,
 				error
@@ -373,36 +363,6 @@
 				success,
 				error,
 			});
-		},
-
-		//#endregion
-
-		//#region Manage Methods
-
-		/* Add New Insteon Device */
-		submitAddress: function(node, action, address){
-			$('#add_device,#remove_device').prop('disabled', true);
-
-			manageDevice(node.id, address, action,
-				data => {
-					$('#add_device,#remove_device').prop('disabled', false);
-
-					if(data.error){
-						sendErrorToDebugConsole(node.id,data.message);
-						return;
-					}
-
-					alert(data.message);
-
-					$('#new_device_address').val('');
-					renderLinksTable(data.links);
-				},
-				e => {
-					$('#add_device,#remove_device').prop('disabled', false);
-
-					sendErrorToDebugConsole(node.id,error);
-				}
-			);
 		},
 
 		//#endregion
@@ -428,6 +388,25 @@
 
 		toHex: function(n){
 			return `0x${n.toString(16).toUpperCase().padStart(2, '0')}`;
+		},
+
+		linksToTypes: function(links){
+			const records = {scenes: {}, responders: []};
+
+			// Parse controller records (plm -> device)
+			const controllerRecords = links.filter(_ => _.type === 1).forEach(link => {
+
+				const sceneArray = records.scenes[link.group] || [];
+
+				sceneArray.push(link);
+
+				records.scenes[link.group] = sceneArray;
+			});
+
+			// Parse responder records (device -> plm)
+			records.responders = links.filter(_ => _.type === 0);
+
+			return records;
 		}
 
 		 //#endregion

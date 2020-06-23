@@ -165,10 +165,15 @@ async function getInsteonPorts(req: Request, res: Response){
 async function getInsteonLinks(RED: Red, req: Request, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
-		let PLMConfigNode = RED.nodes.getNode(req.query.id?.toString() ?? '') as InsteonModemConfigNode;
+		const {id, refresh} = parseStdQueryString(req);
+
+		const plm = getPlmFromNodeId(RED, id);
 
 		/* Send the links back to the client */
-		res.json(PLMConfigNode?.plm?.links ?? []);
+		if(refresh)
+			res.json(await plm.syncLinks())
+		else
+			res.json(plm.links);
 	}
 	catch(e){
 		res.status(500).send({message: 'An error has occured', error: e});
@@ -257,15 +262,22 @@ async function getInsteonInfo(RED: Red, req: Request, res: Response){
 async function getInsteonConfig(RED: Red, req: Request, res: Response){
 	/* Lookup the PLM Config Node by the node ID that was passed in via the request */
 	try{
-		let PLMConfigNode = RED.nodes.getNode(req.query.id?.toString() ?? '') as InsteonModemConfigNode;
+		const {id, refresh} = parseStdQueryString(req);
 
-		const config = PLMConfigNode?.plm?.config;
+		const plm = getPlmFromNodeId(RED, id);
 
-		if(config == undefined)
-			throw Error('Could not get config from plm.  PLM is not ready');
+		if(refresh){
+			res.json(await plm.syncConfig());
+		}
+		else{
+			const config = plm.config;
 
-		/* Send the config back to the client */
-		res.json(config);
+			if(config == undefined)
+				throw Error('Could not get config from plm.  PLM is not ready');
+
+			/* Send the config back to the client */
+			res.json(config);
+		}
 	}
 	catch(e){
 		res.status(500).send({message: 'An error has occured', error: e});
@@ -380,5 +392,28 @@ function removeOldPLM(node: InsteonModemConfigNode){
 //#endregion
 
 //#region Utlity Functions
+
+function parseStdQueryString(req: Request){
+	// Parse query string params
+	const id = req.query.id?.toString() ?? '';
+	const refresh = req.query.refresh === 'true';
+
+	// If no id, then throw error
+	if(id === '')
+			throw Error('No id supplied');
+
+	return {id, refresh};
+}
+
+function getPlmFromNodeId(RED: Red, id: string){
+	const PLMConfigNode = RED.nodes.getNode(id) as InsteonModemConfigNode;
+
+	const plm = PLMConfigNode.plm;
+
+	if(!plm)
+		throw Error('No PLM');
+
+	return plm;
+}
 
 //#endregion
