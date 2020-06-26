@@ -55,28 +55,29 @@ function onReady(node: DeviceSubscribeNode, text: string){
 	node.send({ topic: 'ready', payload: text });
 
 	// Adding event listeners
-	node.deviceConfigNode?.device?.on(['packet', '**'], function (this: any, p){ onPacket(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['packet', '**'], function (this: any, p: Packet.StandardMessageRecieved){ onPacket(node, eventToArray(this.event), p) });
 
 	// Device events
-	node.deviceConfigNode?.device?.on(['switch', '**'], function (this: any, p){ console.log(this), onSwitch(node, eventToArray(this.event), p) });
-	node.deviceConfigNode?.device?.on(['dim', '**' ], function (this: any, p){ onDim(node, eventToArray(this.event), p) });
-	node.deviceConfigNode?.device?.on(['sensor', '**' ], function (this: any, p){ onSensor(node, eventToArray(this.event), p) });
-	node.deviceConfigNode?.device?.on(['heartbeat', '**' ], function (this: any, p){ onHeartbeat(node, eventToArray(this.event), p) });
-	node.deviceConfigNode?.device?.on(['battery', '**' ], function (this: any, p){ onBattery(node, eventToArray(this.event), p) });
-	node.deviceConfigNode?.device?.on(['motion', '**' ], function (this: any, p){ onMotion(node, eventToArray(this.event), p) });
-	node.deviceConfigNode?.device?.on(['light', '**' ], function (this: any, p){ onLight(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['switch', '**'], function (this: any, p: Packet.StandardMessageRecieved){ console.log(this), onSwitch(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['dim', '**' ], function (this: any, p: Packet.StandardMessageRecieved){ onDim(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['sensor', '**' ], function (this: any, p: Packet.StandardMessageRecieved){ onSensor(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['heartbeat', '**' ], function (this: any, p: Packet.StandardMessageRecieved){ onHeartbeat(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['battery', '**' ], function (this: any, p: Packet.StandardMessageRecieved){ onBattery(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['motion', '**' ], function (this: any, p: Packet.StandardMessageRecieved){ onMotion(node, eventToArray(this.event), p) });
+	node.deviceConfigNode?.device?.on(['light', '**' ], function (this: any, p: Packet.StandardMessageRecieved){ onLight(node, eventToArray(this.event), p) });
 }
 
 function onPacket(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
 	node.send({topic: 'packet', payload: packet});
 }
 
-function onSwitch(node: DeviceSubscribeNode, event: string[], packet: Packet.Packet){
+function onSwitch(node: DeviceSubscribeNode, event: string[], packet: Packet.StandardMessageRecieved){
 	node.send({
 		topic: event[0],
 		payload: {
 			status: event[1],
 			type: event[2],
+			button: packet.to[2]
 		},
 		event,
 		packet,
