@@ -80,7 +80,7 @@
   dependencies:
     defer-to-connect "^1.0.1"
 
-"@types/bluebird@^3.5.28":
+"@types/bluebird@^3.5.30":
   version "3.5.32"
   resolved "https://registry.yarnpkg.com/@types/bluebird/-/bluebird-3.5.32.tgz#381e7b59e39f010d20bbf7e044e48f5caf1ab620"
   integrity sha512-dIOxFfI0C+jz89g6lQ+TqhGgPQ0MxSnh/E4xuC0blhFtyW269+mPG5QeLgbdwst/LvdP8o1y0o/Gz5EHXLec/g==
@@ -265,9 +265,9 @@ bindings@^1.5.0:
     file-uri-to-path "1.0.0"
 
 bl@^4.0.1:
-  version "4.0.2"
-  resolved "https://registry.yarnpkg.com/bl/-/bl-4.0.2.tgz#52b71e9088515d0606d9dd9cc7aa48dc1f98e73a"
-  integrity sha512-j4OH8f6Qg2bGuWfRiltT2HYGx0e1QcBTrK9KAHNMwMZdQnDZFk0ZSYIpADjYCB3U12nicC5tVJwSIhwOWjb4RQ==
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/bl/-/bl-4.0.3.tgz#12d6287adc29080e22a705e5764b2a9522cdc489"
+  integrity sha512-fs4G6/Hu4/EE+F75J8DuN/0IpQqNjAdC7aEQv7Qt8MHGUH7Ckv2MwTEEeN9QehD0pfIDkMI1bkHYkKy7xHyKIg==
   dependencies:
     buffer "^5.5.0"
     inherits "^2.0.4"
@@ -552,10 +552,10 @@ escape-goat@^2.0.0:
   resolved "https://registry.yarnpkg.com/escape-goat/-/escape-goat-2.1.1.tgz#1b2dc77003676c457ec760b2dc68edb648188675"
   integrity sha512-8/uIhbG12Csjy2JEW7D9pHbreaVaS/OpN3ycnyvElTdwM5n6GY6W6e2IPemfvGZeUMqZ9A/3GqIZMgKnBhAw/Q==
 
-eventemitter2@^6.0.0:
-  version "6.4.2"
-  resolved "https://registry.yarnpkg.com/eventemitter2/-/eventemitter2-6.4.2.tgz#f31f8b99d45245f0edbc5b00797830ff3b388970"
-  integrity sha512-r/Pwupa5RIzxIHbEKCkNXqpEQIIT4uQDxmP4G/Lug/NokVUWj0joz/WzWl3OxRpC5kDrH/WdiUJoR+IrwvXJEw==
+eventemitter2@^6.2.1:
+  version "6.4.3"
+  resolved "https://registry.yarnpkg.com/eventemitter2/-/eventemitter2-6.4.3.tgz#35c563619b13f3681e7eb05cbdaf50f56ba58820"
+  integrity sha512-t0A2msp6BzOf+QAcI6z9XMktLj52OjGQg+8SJH6v5+3uxNpWYRR3wQmfA+6xtMU9kOC59qk9licus5dYcrYkMQ==
 
 exec-sh@^0.2.0:
   version "0.2.2"
@@ -772,16 +772,16 @@ insteon-packet-parser@^3.3.0:
   resolved "https://registry.yarnpkg.com/insteon-packet-parser/-/insteon-packet-parser-3.3.1.tgz#64edfc11cf048ac5dfb8806e28a41160390240b4"
   integrity sha512-xuSYpXDJvPAO+n8wvch3WrMJwMobzAryvs1t/6+wbqxtARIT8G7NpmCZ9NALooNJ2sEu8VoqanuRa4kksU6lLg==
 
-insteon-plm@^0.5.0:
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/insteon-plm/-/insteon-plm-0.5.0.tgz#d36d3a0daaa1cb6e0989f4fb519d0c6d2971fcde"
-  integrity sha512-G5wPcXE2gw31DApcqahLa3lKUYmnWlw6DaiUhQjUY7XmkXM0teafaIS4G5w1C2+umYSpJ2A+eBejL1tBCZ7H1g==
+insteon-plm@^0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/insteon-plm/-/insteon-plm-0.6.0.tgz#c7e6a6a8b9deb891d12b49131d838a4681395351"
+  integrity sha512-ypiCnuh0qSeNsmreTe4IlOpCFVMIbU9JG1JUrn1/Ey3oVcM11yuNa2LyF52kvQcIT9pQEytk0PIlxglY/w1uMQ==
   dependencies:
-    "@types/bluebird" "^3.5.28"
+    "@types/bluebird" "^3.5.30"
     async "^3.2.0"
     bluebird "^3.7.2"
     debug "^4.1.1"
-    eventemitter2 "^6.0.0"
+    eventemitter2 "^6.2.1"
     insteon-packet-parser "^3.3.0"
     serialport "^8.0.7"
 
