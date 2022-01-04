@@ -1,4 +1,4 @@
-# Insteon PLM for Node-RED
+# [Deprecated] Insteon PLM for Node-RED
 
 ## Overview
 A library of nodes for interacting with the Insteon home automation ecosystem.
